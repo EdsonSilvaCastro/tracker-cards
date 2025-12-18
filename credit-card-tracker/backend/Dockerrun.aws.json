@@ -1,0 +1,14 @@
+{
+  "AWSEBDockerrunVersion": "1",
+  "Image": {
+    "Name": "YOUR_ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/credit-card-tracker-backend:latest",
+    "Update": "true"
+  },
+  "Ports": [
+    {
+      "ContainerPort": 3001,
+      "HostPort": 8080
+    }
+  ],
+  "Logging": "/var/log/nodejs"
+}
