@@ -61,6 +61,8 @@ export default function MonthlyOverview() {
   const [showBudgetModal, setShowBudgetModal] = useState(false);
   const [showExpenseModal, setShowExpenseModal] = useState(false);
   const [showCopyModal, setShowCopyModal] = useState(false);
+  const [showCopySectionModal, setShowCopySectionModal] = useState(false);
+  const [copySectionKey, setCopySectionKey] = useState(null);
   const [editingExpense, setEditingExpense] = useState(null);
   const [selectedSection, setSelectedSection] = useState(null);
   
@@ -78,6 +80,7 @@ export default function MonthlyOverview() {
     status: 'pending'
   });
   const [copyForm, setCopyForm] = useState({ from_month: '', from_year: '', include_actual: false });
+  const [copySectionForm, setCopySectionForm] = useState({ from_month: '', from_year: '', include_actual: false });
   const [saving, setSaving] = useState(false);
 
   const currentMonth = currentDate.getMonth() + 1;
@@ -394,6 +397,50 @@ export default function MonthlyOverview() {
     }
   };
 
+  const handleCopySectionBudget = async () => {
+    if (!copySectionForm.from_month || !copySectionForm.from_year || !copySectionKey) {
+      alert('Please select source month and year');
+      return;
+    }
+    setSaving(true);
+    try {
+      // Fetch source month budget data
+      const response = await api.get(`/budget/${copySectionForm.from_month}/${copySectionForm.from_year}`);
+      const sourceData = response.data.data;
+      
+      // Find the section to copy
+      const sourceSection = sourceData?.sections?.find(s => s.key === copySectionKey);
+      
+      if (!sourceSection || sourceSection.expenses.length === 0) {
+        alert('No expenses found in this section for the selected month');
+        setSaving(false);
+        return;
+      }
+
+      // Copy each expense from the section
+      for (const expense of sourceSection.expenses) {
+        await api.post('/budget/expense', {
+          month: currentMonth,
+          year: currentYear,
+          section: copySectionKey,
+          expense_name: expense.expense_name,
+          budgeted_amount: expense.budgeted_amount,
+          actual_spent: copySectionForm.include_actual ? expense.actual_spent : 0,
+          status: 'pending'
+        });
+      }
+
+      setShowCopySectionModal(false);
+      setCopySectionKey(null);
+      fetchAllData();
+    } catch (err) {
+      console.error('Error copying section budget:', err);
+      alert('Failed to copy section budget');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   // Data
   const cards = cardsData?.cards || [];
   const cardTotals = cardsData?.totals || { total_balance: 0, total_to_pay: 0, paid_count: 0, total_count: 0 };
@@ -430,22 +477,22 @@ export default function MonthlyOverview() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Monthly Overview</h1>
-          <p className="text-gray-600">Track credit cards and budget in one place</p>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Monthly Overview</h1>
+          <p className="text-sm sm:text-base text-gray-600">Track credit cards and budget in one place</p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" size="sm" onClick={() => setShowCopyModal(true)}>
-            <Copy className="h-4 w-4 mr-1" />
-            Copy Budget
+            <Copy className="h-4 w-4 sm:mr-1" />
+            <span className="hidden sm:inline">Copy Budget</span>
           </Button>
           <Button variant="outline" size="sm" onClick={() => {
             setBudgetForm({ total_budget: budgetOverview.total_budget || '' });
             setShowBudgetModal(true);
           }}>
-            <Settings className="h-4 w-4 mr-1" />
-            Set Budget
+            <Settings className="h-4 w-4 sm:mr-1" />
+            <span className="hidden sm:inline">Set Budget</span>
           </Button>
         </div>
       </div>
@@ -477,8 +524,8 @@ export default function MonthlyOverview() {
 
       {/* Budget Usage - Main Focus */}
       <Card className="bg-gradient-to-r from-indigo-500 to-purple-600 text-white">
-        <CardContent className="p-6">
-          <div className="flex items-center justify-between mb-2">
+        <CardContent className="p-4 sm:p-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 mb-2">
             <p className="text-indigo-100 text-sm font-medium">BUDGET USAGE</p>
             <div className={`px-3 py-1 rounded-full text-xs font-semibold ${(budgetOverview.total_budget || 0) >= cardTotals.total_to_pay ? 'bg-green-400/20 text-green-100' : 'bg-red-400/20 text-red-100'}`}>
               {(budgetOverview.total_budget || 0) >= cardTotals.total_to_pay ? '✓ Under Budget' : '⚠ Over Budget'}
@@ -486,10 +533,10 @@ export default function MonthlyOverview() {
           </div>
           
           {/* Main Budget Display */}
-          <div className="text-center py-4">
-            <p className="text-4xl font-bold">{formatCurrency(budgetOverview.total_spent || 0)}</p>
-            <p className="text-indigo-200 text-lg">of {formatCurrency(budgetOverview.total_budget || 0)}</p>
-            <p className="text-indigo-100 text-sm mt-1">
+          <div className="text-center py-2 sm:py-4">
+            <p className="text-2xl sm:text-4xl font-bold">{formatCurrency(budgetOverview.total_spent || 0)}</p>
+            <p className="text-indigo-200 text-base sm:text-lg">of {formatCurrency(budgetOverview.total_budget || 0)}</p>
+            <p className="text-indigo-100 text-xs sm:text-sm mt-1">
               {(budgetOverview.percentage_spent || 0).toFixed(0)}% spent • {formatCurrency((budgetOverview.total_budget || 0) - (budgetOverview.total_spent || 0))} remaining
             </p>
           </div>
@@ -504,63 +551,73 @@ export default function MonthlyOverview() {
             </div>
           </div>
           
-          <div className="grid grid-cols-3 gap-4 text-center">
-            <div className="bg-white/10 rounded-lg p-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4 text-center">
+            <div className="bg-white/10 rounded-lg p-2 sm:p-3 flex sm:block items-center justify-between">
               <p className="text-indigo-100 text-xs">Cards to Pay</p>
-              <p className="text-lg font-bold">{formatCurrency(cardTotals.total_to_pay)}</p>
+              <p className="text-base sm:text-lg font-bold">{formatCurrency(cardTotals.total_to_pay)}</p>
             </div>
-            <div className="bg-white/10 rounded-lg p-3">
+            <div className="bg-white/10 rounded-lg p-2 sm:p-3 flex sm:block items-center justify-between">
               <p className="text-indigo-100 text-xs">Pending to Pay</p>
-              <p className="text-lg font-bold">{formatCurrency(nonCardExpenses)}</p>
+              <p className="text-base sm:text-lg font-bold">{formatCurrency(nonCardExpenses)}</p>
             </div>
-            <div className="bg-white/10 rounded-lg p-3">
+            <div className="bg-white/10 rounded-lg p-2 sm:p-3 flex sm:block items-center justify-between">
               <p className="text-indigo-100 text-xs">Total Outflow</p>
-              <p className="text-lg font-bold">{formatCurrency(totalMonthlyOutflow)}</p>
+              <p className="text-base sm:text-lg font-bold">{formatCurrency(totalMonthlyOutflow)}</p>
             </div>
           </div>
         </CardContent>
       </Card>
 
       {/* Detail Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
         <Card className="border-l-4 border-l-blue-500">
-          <CardContent className="p-4">
-            <p className="text-sm text-gray-500">Credit Cards</p>
-            <p className="text-xl font-bold text-blue-600">{formatCurrency(cardTotals.total_to_pay)}</p>
-            <p className="text-xs text-gray-400">Sum of all card payments this month</p>
+          <CardContent className="p-3 sm:p-4">
+            <div className="flex items-center justify-between sm:block">
+              <p className="text-xs sm:text-sm text-gray-500">Credit Cards</p>
+              <p className="text-lg sm:text-xl font-bold text-blue-600">{formatCurrency(cardTotals.total_to_pay)}</p>
+            </div>
+            <p className="text-xs text-gray-400 hidden sm:block">Sum of all card payments this month</p>
           </CardContent>
         </Card>
         <Card className="border-l-4 border-l-cyan-500">
-          <CardContent className="p-4">
-            <p className="text-sm text-gray-500">Cards Paid</p>
-            <p className="text-xl font-bold text-cyan-600">{cardTotals.paid_count}/{cardTotals.total_count}</p>
-            <p className="text-xs text-gray-400">Cards marked as paid</p>
+          <CardContent className="p-3 sm:p-4">
+            <div className="flex items-center justify-between sm:block">
+              <p className="text-xs sm:text-sm text-gray-500">Cards Paid</p>
+              <p className="text-lg sm:text-xl font-bold text-cyan-600">{cardTotals.paid_count}/{cardTotals.total_count}</p>
+            </div>
+            <p className="text-xs text-gray-400 hidden sm:block">Cards marked as paid</p>
           </CardContent>
         </Card>
         <Card className="border-l-4 border-l-amber-500">
-          <CardContent className="p-4">
-            <p className="text-sm text-gray-500">Pending to Pay</p>
-            <p className="text-xl font-bold text-amber-600">{formatCurrency(nonCardExpenses)}</p>
-            <p className="text-xs text-gray-400">Expenses pending to charge in card</p>
+          <CardContent className="p-3 sm:p-4">
+            <div className="flex items-center justify-between sm:block">
+              <p className="text-xs sm:text-sm text-gray-500">Pending to Pay</p>
+              <p className="text-lg sm:text-xl font-bold text-amber-600">{formatCurrency(nonCardExpenses)}</p>
+            </div>
+            <p className="text-xs text-gray-400 hidden sm:block">Expenses pending to charge in card</p>
           </CardContent>
         </Card>
         <Card className={`border-l-4 ${(budgetOverview.total_budget || 0) >= cardTotals.total_to_pay ? 'border-l-green-500' : 'border-l-red-500'}`}>
-          <CardContent className="p-4">
-            <p className="text-sm text-gray-500">Difference</p>
-            <p className={`text-xl font-bold ${(budgetOverview.total_budget || 0) >= cardTotals.total_to_pay ? 'text-green-600' : 'text-red-600'}`}>
-              {(budgetOverview.total_budget || 0) >= cardTotals.total_to_pay 
-                ? formatCurrency((budgetOverview.total_budget || 0) - cardTotals.total_to_pay)
-                : `-${formatCurrency(cardTotals.total_to_pay - (budgetOverview.total_budget || 0))}`
-              }
-            </p>
-            <p className="text-xs text-gray-400">Budget minus cards</p>
+          <CardContent className="p-3 sm:p-4">
+            <div className="flex items-center justify-between sm:block">
+              <p className="text-xs sm:text-sm text-gray-500">Difference</p>
+              <p className={`text-lg sm:text-xl font-bold ${(budgetOverview.total_budget || 0) >= cardTotals.total_to_pay ? 'text-green-600' : 'text-red-600'}`}>
+                {(budgetOverview.total_budget || 0) >= cardTotals.total_to_pay 
+                  ? formatCurrency((budgetOverview.total_budget || 0) - cardTotals.total_to_pay)
+                  : `-${formatCurrency(cardTotals.total_to_pay - (budgetOverview.total_budget || 0))}`
+                }
+              </p>
+            </div>
+            <p className="text-xs text-gray-400 hidden sm:block">Budget minus cards</p>
           </CardContent>
         </Card>
         <Card className="border-l-4 border-l-orange-500">
-          <CardContent className="p-4">
-            <p className="text-sm text-gray-500">Total Outflow</p>
-            <p className="text-xl font-bold text-orange-600">{formatCurrency(totalMonthlyOutflow)}</p>
-            <p className="text-xs text-gray-400">Cards + Pending combined</p>
+          <CardContent className="p-3 sm:p-4">
+            <div className="flex items-center justify-between sm:block">
+              <p className="text-xs sm:text-sm text-gray-500">Total Outflow</p>
+              <p className="text-lg sm:text-xl font-bold text-orange-600">{formatCurrency(totalMonthlyOutflow)}</p>
+            </div>
+            <p className="text-xs text-gray-400 hidden sm:block">Cards + Pending combined</p>
           </CardContent>
         </Card>
       </div>
@@ -728,9 +785,23 @@ export default function MonthlyOverview() {
                             </p>
                           </div>
                         </div>
-                        <Button size="sm" variant="ghost" onClick={() => handleOpenExpenseModal(section.key)}>
-                          <Plus className="h-4 w-4" />
-                        </Button>
+                        <div className="flex items-center gap-1">
+                          <Button 
+                            size="sm" 
+                            variant="ghost" 
+                            onClick={() => {
+                              setCopySectionKey(section.key);
+                              setCopySectionForm({ from_month: '', from_year: '', include_actual: false });
+                              setShowCopySectionModal(true);
+                            }}
+                            title="Copy expenses from another month"
+                          >
+                            <Copy className="h-4 w-4" />
+                          </Button>
+                          <Button size="sm" variant="ghost" onClick={() => handleOpenExpenseModal(section.key)}>
+                            <Plus className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </div>
                       <div className="mt-3 h-2 bg-white/50 rounded-full overflow-hidden">
                         <div 
@@ -834,10 +905,10 @@ export default function MonthlyOverview() {
                                 ) : (
                                   <span
                                     onClick={() => startInlineEdit(expense, 'budgeted_amount')}
-                                    className="text-xs text-gray-500 cursor-pointer hover:text-primary-600"
-                                    title="Click to edit budget"
+                                    className="text-xs text-gray-500 cursor-pointer hover:text-primary-600 bg-gray-100 px-1.5 py-0.5 rounded"
+                                    title="Budgeted amount - Click to edit"
                                   >
-                                    B:{formatCurrency(expense.budgeted_amount)}
+                                    <span className="text-gray-400">Budget:</span> {formatCurrency(expense.budgeted_amount)}
                                   </span>
                                 )}
                                 
@@ -856,10 +927,10 @@ export default function MonthlyOverview() {
                                 ) : (
                                   <span
                                     onClick={() => startInlineEdit(expense, 'actual_spent')}
-                                    className="text-xs font-semibold text-gray-700 cursor-pointer hover:text-primary-600"
-                                    title="Click to edit spent"
+                                    className="text-xs font-semibold cursor-pointer hover:text-primary-600 bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded"
+                                    title="Actual spent - Click to edit"
                                   >
-                                    S:{formatCurrency(expense.actual_spent)}
+                                    <span className="font-normal text-blue-500">Spent:</span> {formatCurrency(expense.actual_spent)}
                                   </span>
                                 )}
                                 
@@ -1044,6 +1115,57 @@ export default function MonthlyOverview() {
             <Button variant="outline" onClick={() => setShowCopyModal(false)} className="flex-1">Cancel</Button>
             <Button onClick={handleCopyBudget} disabled={saving} className="flex-1">
               {saving ? 'Copying...' : 'Copy'}
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Copy Section Budget Modal */}
+      <Modal 
+        isOpen={showCopySectionModal} 
+        onClose={() => {
+          setShowCopySectionModal(false);
+          setCopySectionKey(null);
+        }} 
+        title={`Copy ${copySectionKey ? SECTION_COLORS[copySectionKey]?.name : 'Section'} From Another Month`}
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-gray-500">
+            Copy only <strong>{copySectionKey ? SECTION_COLORS[copySectionKey]?.name : ''}</strong> expenses to {currentMonthName} {currentYear}
+          </p>
+          <div className="grid grid-cols-2 gap-4">
+            <Select
+              label="From Month"
+              value={copySectionForm.from_month}
+              onChange={(e) => setCopySectionForm(prev => ({ ...prev, from_month: e.target.value }))}
+            >
+              <option value="">Select...</option>
+              {months.map((m, i) => <option key={i} value={i + 1}>{m}</option>)}
+            </Select>
+            <Input
+              label="From Year"
+              type="number"
+              value={copySectionForm.from_year}
+              onChange={(e) => setCopySectionForm(prev => ({ ...prev, from_year: e.target.value }))}
+              placeholder={currentYear.toString()}
+            />
+          </div>
+          <label className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={copySectionForm.include_actual}
+              onChange={(e) => setCopySectionForm(prev => ({ ...prev, include_actual: e.target.checked }))}
+              className="rounded border-gray-300"
+            />
+            <span className="text-sm text-gray-700">Include spent amounts</span>
+          </label>
+          <div className="flex gap-3 pt-4">
+            <Button variant="outline" onClick={() => {
+              setShowCopySectionModal(false);
+              setCopySectionKey(null);
+            }} className="flex-1">Cancel</Button>
+            <Button onClick={handleCopySectionBudget} disabled={saving} className="flex-1">
+              {saving ? 'Copying...' : 'Copy Section'}
             </Button>
           </div>
         </div>

@@ -116,29 +116,29 @@ export default function Dashboard() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-          <p className="text-gray-600">Overview of your credit cards</p>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Dashboard</h1>
+          <p className="text-sm sm:text-base text-gray-600">Overview of your credit cards</p>
         </div>
-        <div className="flex items-center gap-2 text-sm text-gray-500 bg-gray-100 px-3 py-1.5 rounded-lg">
+        <div className="flex items-center gap-2 text-sm text-gray-500 bg-gray-100 px-3 py-1.5 rounded-lg self-start">
           <CalendarDays className="h-4 w-4" />
           {monthNames[currentMonth - 1]} {currentYear}
         </div>
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         {stats.map((stat) => (
           <Card key={stat.title}>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">{stat.title}</p>
-                  <p className="text-2xl font-bold text-gray-900 mt-1">{stat.value}</p>
+            <CardContent className="p-3 sm:p-6">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+                <div className="order-2 sm:order-1">
+                  <p className="text-xs sm:text-sm font-medium text-gray-600">{stat.title}</p>
+                  <p className="text-lg sm:text-2xl font-bold text-gray-900 mt-1">{stat.value}</p>
                 </div>
-                <div className={`p-3 rounded-full ${stat.color}`}>
-                  <stat.icon className="h-6 w-6" />
+                <div className={`order-1 sm:order-2 p-2 sm:p-3 rounded-full ${stat.color}`}>
+                  <stat.icon className="h-4 w-4 sm:h-6 sm:w-6" />
                 </div>
               </div>
             </CardContent>
@@ -197,23 +197,23 @@ export default function Dashboard() {
                   ? (card.current_balance / card.credit_limit) * 100 
                   : 0;
                 return (
-                  <div key={card.card_id} className="p-4 hover:bg-gray-50 transition-colors">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 bg-primary-100 rounded-lg">
-                          <CreditCard className="h-5 w-5 text-primary-600" />
+                  <div key={card.card_id} className="p-3 sm:p-4 hover:bg-gray-50 transition-colors">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
+                        <div className="p-1.5 sm:p-2 bg-primary-100 rounded-lg flex-shrink-0">
+                          <CreditCard className="h-4 w-4 sm:h-5 sm:w-5 text-primary-600" />
                         </div>
-                        <div>
-                          <p className="font-medium text-gray-900">{card.card_name}</p>
-                          <p className="text-sm text-gray-500">{card.bank}</p>
+                        <div className="min-w-0 flex-1">
+                          <p className="font-medium text-gray-900 text-sm sm:text-base truncate">{card.card_name}</p>
+                          <p className="text-xs sm:text-sm text-gray-500 truncate">{card.bank}</p>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <p className="font-medium text-gray-900">
+                      <div className="text-right flex-shrink-0">
+                        <p className="font-medium text-gray-900 text-sm sm:text-base">
                           {formatCurrency(card.amount_to_pay)}
                         </p>
                         <p className="text-xs text-gray-500">
-                          Balance: {formatCurrency(card.current_balance)}
+                          Bal: {formatCurrency(card.current_balance)}
                         </p>
                       </div>
                     </div>

@@ -151,10 +151,10 @@ export default function Cards() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Credit Cards</h1>
-          <p className="text-gray-600">Manage your credit cards. Monthly balances are tracked in Monthly Overview.</p>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Credit Cards</h1>
+          <p className="text-sm sm:text-base text-gray-600">Manage your credit cards. Monthly balances are tracked in Monthly Overview.</p>
         </div>
         <Button onClick={() => handleOpenModal()}>
           <Plus className="h-4 w-4 mr-2" />
@@ -184,38 +184,57 @@ export default function Cards() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {cards.map((card) => (
-            <Card key={card.id} className="hover:shadow-md transition-shadow">
-              <CardContent className="p-6">
-                {/* Card Header */}
+            <Card key={card.id} className="hover:shadow-md transition-shadow group">
+              <CardContent className="p-4 sm:p-6">
+                {/* Card Header with Inline Actions */}
                 <div className="flex items-start justify-between mb-4">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-primary-100 rounded-lg">
-                      <CreditCard className="h-6 w-6 text-primary-600" />
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                    <div className="p-2 bg-primary-100 rounded-lg flex-shrink-0">
+                      <CreditCard className="h-5 sm:h-6 w-5 sm:w-6 text-primary-600" />
                     </div>
-                    <div>
-                      <h3 className="font-semibold text-gray-900">{card.card_name}</h3>
+                    <div className="min-w-0 flex-1">
+                      <h3 className="font-semibold text-gray-900 truncate">{card.card_name}</h3>
                       <p className="text-sm text-gray-500 flex items-center gap-1">
-                        <Building className="h-3 w-3" />
-                        {card.bank}
+                        <Building className="h-3 w-3 flex-shrink-0" />
+                        <span className="truncate">{card.bank}</span>
                       </p>
                     </div>
                   </div>
-                  <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                    card.status === 'Active' 
-                      ? 'bg-green-100 text-green-700' 
-                      : 'bg-gray-100 text-gray-700'
-                  }`}>
-                    {card.status}
-                  </span>
+                  <div className="flex items-center gap-1 flex-shrink-0">
+                    {/* Inline Edit Button */}
+                    <button
+                      onClick={() => handleOpenModal(card)}
+                      className="p-1.5 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
+                      title="Edit card"
+                    >
+                      <Edit2 className="h-4 w-4" />
+                    </button>
+                    {/* Inline Delete Button */}
+                    <button
+                      onClick={() => handleDelete(card.id)}
+                      className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                      title="Delete card"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                    {/* Status Badge */}
+                    <span className={`ml-1 px-2 py-1 text-xs font-medium rounded-full ${
+                      card.status === 'Active' 
+                        ? 'bg-green-100 text-green-700' 
+                        : 'bg-gray-100 text-gray-700'
+                    }`}>
+                      {card.status}
+                    </span>
+                  </div>
                 </div>
 
                 {/* Card Type Badge */}
-                <div className="mb-4">
+                <div className="mb-4 flex flex-wrap items-center gap-2">
                   <span className="px-3 py-1 text-sm font-medium bg-blue-50 text-blue-700 rounded-full">
                     {card.card_type}
                   </span>
                   {card.card_number_last4 && (
-                    <span className="ml-2 text-sm text-gray-500">
+                    <span className="text-sm text-gray-500">
                       •••• {card.card_number_last4}
                     </span>
                   )}
@@ -223,58 +242,37 @@ export default function Cards() {
 
                 {/* Credit Limit */}
                 <div className="mb-4 p-3 bg-gray-50 rounded-lg">
-                  <p className="text-sm text-gray-500">Credit Limit</p>
-                  <p className="text-xl font-bold text-gray-900">
+                  <p className="text-xs sm:text-sm text-gray-500">Credit Limit</p>
+                  <p className="text-lg sm:text-xl font-bold text-gray-900">
                     {formatCurrency(card.credit_limit)}
                   </p>
                 </div>
 
-                {/* Details */}
-                <div className="grid grid-cols-2 gap-2 text-sm mb-4">
+                {/* Details - Responsive Grid */}
+                <div className="grid grid-cols-2 gap-2 text-xs sm:text-sm">
                   {card.closing_day && (
                     <div className="flex items-center gap-1 text-gray-600">
-                      <Calendar className="h-3 w-3" />
-                      <span>Closes: Day {card.closing_day}</span>
+                      <Calendar className="h-3 w-3 flex-shrink-0" />
+                      <span className="truncate">Closes: Day {card.closing_day}</span>
                     </div>
                   )}
                   {card.payment_due_day && (
                     <div className="flex items-center gap-1 text-gray-600">
-                      <Calendar className="h-3 w-3" />
-                      <span>Due: Day {card.payment_due_day}</span>
+                      <Calendar className="h-3 w-3 flex-shrink-0" />
+                      <span className="truncate">Due: Day {card.payment_due_day}</span>
                     </div>
                   )}
                   {card.interest_rate > 0 && (
                     <div className="flex items-center gap-1 text-gray-600">
-                      <Percent className="h-3 w-3" />
+                      <Percent className="h-3 w-3 flex-shrink-0" />
                       <span>Rate: {card.interest_rate}%</span>
                     </div>
                   )}
                   {card.annual_fee > 0 && (
                     <div className="flex items-center gap-1 text-gray-600">
-                      <span>Annual Fee: {formatCurrency(card.annual_fee)}</span>
+                      <span className="truncate">Fee: {formatCurrency(card.annual_fee)}</span>
                     </div>
                   )}
-                </div>
-
-                {/* Actions */}
-                <div className="flex gap-2 pt-4 border-t">
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="flex-1"
-                    onClick={() => handleOpenModal(card)}
-                  >
-                    <Edit2 className="h-4 w-4 mr-1" />
-                    Edit
-                  </Button>
-                  <Button 
-                    variant="ghost" 
-                    size="sm"
-                    className="text-red-600 hover:bg-red-50"
-                    onClick={() => handleDelete(card.id)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
                 </div>
               </CardContent>
             </Card>

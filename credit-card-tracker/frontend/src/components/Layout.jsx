@@ -18,9 +18,10 @@ const navigation = [
   { name: 'Monthly', href: '/monthly', icon: CalendarDays },
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Cards', href: '/cards', icon: CreditCard },
-  { name: 'Statements', href: '/statements', icon: FileText },
-  { name: 'Payments', href: '/payments', icon: DollarSign },
-  { name: 'Transactions', href: '/transactions', icon: Receipt },
+  // Hidden sections - uncomment when ready to use
+  // { name: 'Statements', href: '/statements', icon: FileText },
+  // { name: 'Payments', href: '/payments', icon: DollarSign },
+  // { name: 'Transactions', href: '/transactions', icon: Receipt },
 ];
 
 export default function Layout() {
