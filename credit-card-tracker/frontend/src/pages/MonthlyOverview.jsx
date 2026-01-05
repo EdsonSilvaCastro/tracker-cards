@@ -512,6 +512,12 @@ export default function MonthlyOverview() {
               <ChevronRight className="h-6 w-6 text-gray-600" />
             </button>
           </div>
+          {/* Payment Timing Notice */}
+          <div className="mt-3 pt-3 border-t border-gray-100">
+            <p className="text-xs text-center text-gray-500">
+              💳 <span className="font-medium">Payment Cycle:</span> In {currentMonthName} you pay the expenses from {months[(currentDate.getMonth() + 11) % 12]}
+            </p>
+          </div>
         </CardContent>
       </Card>
 
@@ -559,17 +565,19 @@ export default function MonthlyOverview() {
             <div className="bg-white/10 rounded-lg p-2 sm:p-3 flex sm:block items-center justify-between">
               <p className="text-indigo-100 text-xs">Pending to Pay</p>
               <p className="text-base sm:text-lg font-bold">{formatCurrency(nonCardExpenses)}</p>
+              <p className="text-indigo-200 text-[10px] hidden sm:block">Cash/transfers not on cards</p>
             </div>
             <div className="bg-white/10 rounded-lg p-2 sm:p-3 flex sm:block items-center justify-between">
               <p className="text-indigo-100 text-xs">Total Outflow</p>
               <p className="text-base sm:text-lg font-bold">{formatCurrency(totalMonthlyOutflow)}</p>
+              <p className="text-indigo-200 text-[10px] hidden sm:block">Cards + Pending combined</p>
             </div>
           </div>
         </CardContent>
       </Card>
 
       {/* Detail Cards */}
-      <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
+      <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
         <Card className="border-l-4 border-l-blue-500">
           <CardContent className="p-3 sm:p-4">
             <div className="flex items-center justify-between sm:block">
@@ -588,36 +596,31 @@ export default function MonthlyOverview() {
             <p className="text-xs text-gray-400 hidden sm:block">Cards marked as paid</p>
           </CardContent>
         </Card>
-        <Card className="border-l-4 border-l-amber-500">
+        <Card className={`border-l-4 ${unallocatedAmount > 0 ? 'border-l-amber-500' : 'border-l-emerald-500'}`}>
           <CardContent className="p-3 sm:p-4">
             <div className="flex items-center justify-between sm:block">
-              <p className="text-xs sm:text-sm text-gray-500">Pending to Pay</p>
-              <p className="text-lg sm:text-xl font-bold text-amber-600">{formatCurrency(nonCardExpenses)}</p>
+              <p className="text-xs sm:text-sm text-gray-500">Unallocated</p>
+              <p className={`text-lg sm:text-xl font-bold ${unallocatedAmount > 0 ? 'text-amber-600' : 'text-emerald-600'}`}>
+                {unallocatedAmount > 0 ? formatCurrency(unallocatedAmount) : formatCurrency(0)}
+              </p>
             </div>
-            <p className="text-xs text-gray-400 hidden sm:block">Expenses pending to charge in card</p>
+            <p className="text-xs text-gray-400 hidden sm:block">
+              {unallocatedAmount > 0 ? 'Card expenses not in budget' : 'All card expenses allocated'}
+            </p>
           </CardContent>
         </Card>
         <Card className={`border-l-4 ${(budgetOverview.total_budget || 0) >= cardTotals.total_to_pay ? 'border-l-green-500' : 'border-l-red-500'}`}>
           <CardContent className="p-3 sm:p-4">
             <div className="flex items-center justify-between sm:block">
-              <p className="text-xs sm:text-sm text-gray-500">Difference</p>
+              <p className="text-xs sm:text-sm text-gray-500">Budget vs Cards</p>
               <p className={`text-lg sm:text-xl font-bold ${(budgetOverview.total_budget || 0) >= cardTotals.total_to_pay ? 'text-green-600' : 'text-red-600'}`}>
                 {(budgetOverview.total_budget || 0) >= cardTotals.total_to_pay 
-                  ? formatCurrency((budgetOverview.total_budget || 0) - cardTotals.total_to_pay)
+                  ? `+${formatCurrency((budgetOverview.total_budget || 0) - cardTotals.total_to_pay)}`
                   : `-${formatCurrency(cardTotals.total_to_pay - (budgetOverview.total_budget || 0))}`
                 }
               </p>
             </div>
-            <p className="text-xs text-gray-400 hidden sm:block">Budget minus cards</p>
-          </CardContent>
-        </Card>
-        <Card className="border-l-4 border-l-orange-500">
-          <CardContent className="p-3 sm:p-4">
-            <div className="flex items-center justify-between sm:block">
-              <p className="text-xs sm:text-sm text-gray-500">Total Outflow</p>
-              <p className="text-lg sm:text-xl font-bold text-orange-600">{formatCurrency(totalMonthlyOutflow)}</p>
-            </div>
-            <p className="text-xs text-gray-400 hidden sm:block">Cards + Pending combined</p>
+            <p className="text-xs text-gray-400 hidden sm:block">Budget minus card payments</p>
           </CardContent>
         </Card>
       </div>
@@ -743,23 +746,6 @@ export default function MonthlyOverview() {
       {/* Budget Tab */}
       {activeTab === 'budget' && (
         <div className="space-y-4">
-          {/* Unallocated indicator */}
-          {unallocatedAmount !== 0 && (
-            <div className={`p-3 rounded-lg flex items-center justify-between ${
-              unallocatedAmount > 0 ? 'bg-amber-50 border border-amber-200' : 'bg-blue-50 border border-blue-200'
-            }`}>
-              <div className="flex items-center gap-2">
-                <AlertCircle className={`h-4 w-4 ${unallocatedAmount > 0 ? 'text-amber-600' : 'text-blue-600'}`} />
-                <span className={`text-sm font-medium ${unallocatedAmount > 0 ? 'text-amber-700' : 'text-blue-700'}`}>
-                  {unallocatedAmount > 0 ? 'Unallocated from Cards' : 'Expenses not identified'}
-                </span>
-              </div>
-              <span className={`text-sm font-bold ${unallocatedAmount > 0 ? 'text-amber-700' : 'text-blue-700'}`}>
-                {formatCurrency(Math.abs(unallocatedAmount))}
-              </span>
-            </div>
-          )}
-
           {/* Budget Sections */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             {budgetSections.map((section) => {
