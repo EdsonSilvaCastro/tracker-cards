@@ -528,49 +528,57 @@ export default function MonthlyOverview() {
         </div>
       )}
 
-      {/* Budget Usage - Main Focus */}
+      {/* Monthly Summary - Main Focus */}
       <Card className="bg-gradient-to-r from-indigo-500 to-purple-600 text-white">
         <CardContent className="p-4 sm:p-6">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 mb-2">
-            <p className="text-indigo-100 text-sm font-medium">BUDGET USAGE</p>
+            <p className="text-indigo-100 text-sm font-medium">MONTHLY SUMMARY</p>
             <div className={`px-3 py-1 rounded-full text-xs font-semibold ${(budgetOverview.total_budget || 0) >= cardTotals.total_to_pay ? 'bg-green-400/20 text-green-100' : 'bg-red-400/20 text-red-100'}`}>
               {(budgetOverview.total_budget || 0) >= cardTotals.total_to_pay ? '✓ Under Budget' : '⚠ Over Budget'}
             </div>
           </div>
           
-          {/* Main Budget Display */}
+          {/* Main Display - Cards Total to Pay */}
           <div className="text-center py-2 sm:py-4">
-            <p className="text-2xl sm:text-4xl font-bold">{formatCurrency(budgetOverview.total_spent || 0)}</p>
-            <p className="text-indigo-200 text-base sm:text-lg">of {formatCurrency(budgetOverview.total_budget || 0)}</p>
-            <p className="text-indigo-100 text-xs sm:text-sm mt-1">
-              {(budgetOverview.percentage_spent || 0).toFixed(0)}% spent • {formatCurrency((budgetOverview.total_budget || 0) - (budgetOverview.total_spent || 0))} remaining
+            <p className="text-indigo-200 text-xs sm:text-sm mb-1">Total to Pay on Cards</p>
+            <p className="text-2xl sm:text-4xl font-bold">{formatCurrency(cardTotals.total_to_pay)}</p>
+            <p className="text-indigo-100 text-xs sm:text-sm mt-2">
+              Budget: {formatCurrency(budgetOverview.total_budget || 0)} • 
+              {(budgetOverview.total_budget || 0) >= cardTotals.total_to_pay 
+                ? ` ${formatCurrency((budgetOverview.total_budget || 0) - cardTotals.total_to_pay)} available`
+                : ` ${formatCurrency(cardTotals.total_to_pay - (budgetOverview.total_budget || 0))} over budget`
+              }
             </p>
           </div>
           
-          {/* Progress Bar */}
+          {/* Progress Bar - Cards vs Budget */}
           <div className="mb-4">
             <div className="h-3 bg-white/20 rounded-full overflow-hidden">
               <div 
-                className={`h-full rounded-full transition-all ${(budgetOverview.percentage_spent || 0) >= 100 ? 'bg-red-400' : (budgetOverview.percentage_spent || 0) >= 90 ? 'bg-yellow-400' : 'bg-green-400'}`}
-                style={{ width: `${Math.min(budgetOverview.percentage_spent || 0, 100)}%` }}
+                className={`h-full rounded-full transition-all ${
+                  cardTotals.total_to_pay > (budgetOverview.total_budget || 0) ? 'bg-red-400' 
+                  : cardTotals.total_to_pay > (budgetOverview.total_budget || 0) * 0.9 ? 'bg-yellow-400' 
+                  : 'bg-green-400'
+                }`}
+                style={{ width: `${Math.min(((cardTotals.total_to_pay / (budgetOverview.total_budget || 1)) * 100), 100)}%` }}
               />
             </div>
           </div>
           
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4 text-center">
             <div className="bg-white/10 rounded-lg p-2 sm:p-3 flex sm:block items-center justify-between">
-              <p className="text-indigo-100 text-xs">Cards to Pay</p>
-              <p className="text-base sm:text-lg font-bold">{formatCurrency(cardTotals.total_to_pay)}</p>
+              <p className="text-indigo-100 text-xs">Your Budget</p>
+              <p className="text-base sm:text-lg font-bold">{formatCurrency(budgetOverview.total_budget || 0)}</p>
             </div>
             <div className="bg-white/10 rounded-lg p-2 sm:p-3 flex sm:block items-center justify-between">
               <p className="text-indigo-100 text-xs">Total Budgeted</p>
               <p className="text-base sm:text-lg font-bold">{formatCurrency(totalBudgetExpenses)}</p>
-              <p className="text-indigo-200 text-[10px] hidden sm:block">Sum of all 4 sections budget</p>
+              <p className="text-indigo-200 text-[10px] hidden sm:block">Sum of all 4 sections</p>
             </div>
             <div className="bg-white/10 rounded-lg p-2 sm:p-3 flex sm:block items-center justify-between">
-              <p className="text-indigo-100 text-xs">Total Outflow</p>
-              <p className="text-base sm:text-lg font-bold">{formatCurrency(totalMonthlyOutflow)}</p>
-              <p className="text-indigo-200 text-[10px] hidden sm:block">Cards + Non-card expenses</p>
+              <p className="text-indigo-100 text-xs">Actual Spent</p>
+              <p className="text-base sm:text-lg font-bold">{formatCurrency(budgetOverview.total_spent || 0)}</p>
+              <p className="text-indigo-200 text-[10px] hidden sm:block">Registered expenses</p>
             </div>
           </div>
         </CardContent>
