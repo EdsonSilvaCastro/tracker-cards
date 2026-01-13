@@ -6,6 +6,8 @@ import * as paymentsController from '../controllers/paymentsController.js';
 import * as transactionsController from '../controllers/transactionsController.js';
 import * as monthlyBalancesController from '../controllers/monthlyBalancesController.js';
 import * as budgetController from '../controllers/budgetController.js';
+import * as savingsController from '../controllers/savingsController.js';
+import * as analyticsController from '../controllers/analyticsController.js';
 
 const router = express.Router();
 
@@ -60,5 +62,19 @@ router.get('/transactions/:id', transactionsController.getTransactionById);
 router.post('/transactions', transactionsController.createTransaction);
 router.put('/transactions/:id', transactionsController.updateTransaction);
 router.delete('/transactions/:id', transactionsController.deleteTransaction);
+
+// ==================== Savings Goals Routes ====================
+router.get('/savings', savingsController.getSavingsGoals);
+router.get('/savings/summary', savingsController.getSavingsSummary);
+router.get('/savings/:id', savingsController.getSavingsGoalById);
+router.post('/savings', savingsController.createSavingsGoal);
+router.post('/savings/contribution', savingsController.addContribution);
+router.put('/savings/:id', savingsController.updateSavingsGoal);
+router.delete('/savings/:id', savingsController.deleteSavingsGoal);
+
+// ==================== Analytics Routes ====================
+router.get('/analytics/annual/:year', analyticsController.getAnnualSummary);
+router.get('/analytics/compare', analyticsController.compareMonths);
+router.get('/analytics/trends', analyticsController.getSpendingTrends);
 
 export default router;

@@ -10,6 +10,10 @@ import Statements from './pages/Statements';
 import Payments from './pages/Payments';
 import Transactions from './pages/Transactions';
 import MonthlyOverview from './pages/MonthlyOverview';
+import PaymentDueDates from './pages/PaymentDueDates';
+import MonthlyComparison from './pages/MonthlyComparison';
+import SavingsGoals from './pages/SavingsGoals';
+import AnnualSummary from './pages/AnnualSummary';
 import Layout from './components/Layout';
 
 // Protected Route component
@@ -76,6 +80,10 @@ function App() {
           >
             <Route index element={<Navigate to="/monthly" />} />
             <Route path="monthly" element={<MonthlyOverview />} />
+            <Route path="due-dates" element={<PaymentDueDates />} />
+            <Route path="compare" element={<MonthlyComparison />} />
+            <Route path="savings" element={<SavingsGoals />} />
+            <Route path="annual" element={<AnnualSummary />} />
             <Route path="dashboard" element={<Dashboard />} />
             <Route path="cards" element={<Cards />} />
             <Route path="statements" element={<Statements />} />

@@ -11,11 +11,19 @@ import {
   Menu,
   X,
   User,
-  CalendarDays
+  CalendarDays,
+  Calendar,
+  BarChart3,
+  PiggyBank,
+  TrendingUp
 } from 'lucide-react';
 
 const navigation = [
   { name: 'Monthly', href: '/monthly', icon: CalendarDays },
+  { name: 'Due Dates', href: '/due-dates', icon: Calendar },
+  { name: 'Compare', href: '/compare', icon: BarChart3 },
+  { name: 'Savings', href: '/savings', icon: PiggyBank },
+  { name: 'Annual', href: '/annual', icon: TrendingUp },
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Cards', href: '/cards', icon: CreditCard },
   // Hidden sections - uncomment when ready to use
