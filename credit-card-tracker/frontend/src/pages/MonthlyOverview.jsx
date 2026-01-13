@@ -563,14 +563,14 @@ export default function MonthlyOverview() {
               <p className="text-base sm:text-lg font-bold">{formatCurrency(cardTotals.total_to_pay)}</p>
             </div>
             <div className="bg-white/10 rounded-lg p-2 sm:p-3 flex sm:block items-center justify-between">
-              <p className="text-indigo-100 text-xs">Pending to Pay</p>
-              <p className="text-base sm:text-lg font-bold">{formatCurrency(nonCardExpenses)}</p>
-              <p className="text-indigo-200 text-[10px] hidden sm:block">Cash/transfers not on cards</p>
+              <p className="text-indigo-100 text-xs">Total Budgeted</p>
+              <p className="text-base sm:text-lg font-bold">{formatCurrency(totalBudgetExpenses)}</p>
+              <p className="text-indigo-200 text-[10px] hidden sm:block">Sum of all 4 sections budget</p>
             </div>
             <div className="bg-white/10 rounded-lg p-2 sm:p-3 flex sm:block items-center justify-between">
               <p className="text-indigo-100 text-xs">Total Outflow</p>
               <p className="text-base sm:text-lg font-bold">{formatCurrency(totalMonthlyOutflow)}</p>
-              <p className="text-indigo-200 text-[10px] hidden sm:block">Cards + Pending combined</p>
+              <p className="text-indigo-200 text-[10px] hidden sm:block">Cards + Non-card expenses</p>
             </div>
           </div>
         </CardContent>
@@ -920,6 +920,43 @@ export default function MonthlyOverview() {
                                   </span>
                                 )}
                                 
+                                {/* Quick Pay button - sets status to paid with budgeted amount */}
+                                {expense.status !== 'paid' && (
+                                  <button
+                                    onClick={async () => {
+                                      const updates = {
+                                        ...expense,
+                                        status: 'paid',
+                                        actual_spent: expense.budgeted_amount || 0
+                                      };
+                                      try {
+                                        await api.put(`/budget/expense/${expense.id}`, updates);
+                                        setBudgetData(prev => ({
+                                          ...prev,
+                                          sections: prev.sections.map(s => ({
+                                            ...s,
+                                            expenses: s.expenses.map(exp =>
+                                              exp.id === expense.id
+                                                ? { ...exp, status: 'paid', actual_spent: expense.budgeted_amount || 0 }
+                                                : exp
+                                            ),
+                                            total_spent: s.expenses.reduce((sum, exp) =>
+                                              sum + (exp.id === expense.id
+                                                ? parseFloat(expense.budgeted_amount || 0)
+                                                : parseFloat(exp.actual_spent || 0)), 0)
+                                          }))
+                                        }));
+                                      } catch (err) {
+                                        console.error('Error marking as paid:', err);
+                                      }
+                                    }}
+                                    className="p-1 text-green-600 hover:text-green-700 hover:bg-green-50 rounded"
+                                    title="Mark as paid with budgeted amount"
+                                  >
+                                    <CheckCircle className="h-3.5 w-3.5" />
+                                  </button>
+                                )}
+                                
                                 {/* Delete button with inline confirm */}
                                 {deleteConfirm === expense.id ? (
                                   <div className="flex items-center gap-1">
@@ -964,26 +1001,57 @@ export default function MonthlyOverview() {
       {/* Edit Card Modal */}
       <Modal isOpen={!!editingCard} onClose={() => setEditingCard(null)} title={`Edit - ${editingCard?.card_name}`}>
         <div className="space-y-4">
-          <Input
-            label="Amount to Pay"
-            type="number"
-            step="0.01"
-            value={cardForm.amount_to_pay}
-            onChange={(e) => setCardForm(prev => ({ ...prev, amount_to_pay: e.target.value }))}
-            placeholder="0.00"
-          />
-          <Input
-            label="Total Balance"
-            type="number"
-            step="0.01"
-            value={cardForm.current_balance}
-            onChange={(e) => setCardForm(prev => ({ ...prev, current_balance: e.target.value }))}
-            placeholder="0.00"
-          />
-          <div className="flex gap-3 pt-4">
+          {/* Card info header */}
+          <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+            <div className="p-2 bg-primary-100 rounded-lg">
+              <CreditCard className="h-6 w-6 text-primary-600" />
+            </div>
+            <div>
+              <p className="font-semibold text-gray-900">{editingCard?.card_name}</p>
+              <p className="text-sm text-gray-500">{editingCard?.bank}</p>
+            </div>
+          </div>
+          
+          {/* Total Balance - Yellow theme */}
+          <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
+            <label className="block text-sm font-medium text-amber-700 mb-2">
+              💳 Total Balance (Full debt on card)
+            </label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-amber-600 font-medium">$</span>
+              <input
+                type="number"
+                step="0.01"
+                value={cardForm.current_balance}
+                onChange={(e) => setCardForm(prev => ({ ...prev, current_balance: e.target.value }))}
+                placeholder="0.00"
+                className="w-full pl-8 pr-4 py-3 text-lg font-semibold text-amber-700 bg-white border-2 border-amber-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-amber-400"
+              />
+            </div>
+          </div>
+          
+          {/* Amount to Pay - Green theme */}
+          <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+            <label className="block text-sm font-medium text-green-700 mb-2">
+              ✓ Amount to Pay This Month
+            </label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-green-600 font-medium">$</span>
+              <input
+                type="number"
+                step="0.01"
+                value={cardForm.amount_to_pay}
+                onChange={(e) => setCardForm(prev => ({ ...prev, amount_to_pay: e.target.value }))}
+                placeholder="0.00"
+                className="w-full pl-8 pr-4 py-3 text-lg font-semibold text-green-700 bg-white border-2 border-green-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-green-400"
+              />
+            </div>
+          </div>
+          
+          <div className="flex gap-3 pt-2">
             <Button variant="outline" onClick={() => setEditingCard(null)} className="flex-1">Cancel</Button>
-            <Button onClick={handleSaveCard} disabled={saving} className="flex-1">
-              {saving ? 'Saving...' : 'Save'}
+            <Button onClick={handleSaveCard} disabled={saving} className="flex-1 bg-green-600 hover:bg-green-700">
+              {saving ? 'Saving...' : 'Save Changes'}
             </Button>
           </div>
         </div>
