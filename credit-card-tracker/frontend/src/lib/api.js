@@ -78,4 +78,24 @@ export const transactionsApi = {
   delete: (id) => api.delete(`/transactions/${id}`),
 };
 
+// ==================== Budget API ====================
+export const budgetApi = {
+  getMonthlyBudget: (month, year) => api.get(`/budget/${month}/${year}`),
+  upsertBudget: (data) => api.post('/budget', data),
+  upsertExpense: (data) => api.post('/budget/expense', data),
+  updateExpense: (id, data) => api.put(`/budget/expense/${id}`, data),
+  deleteExpense: (id) => api.delete(`/budget/expense/${id}`),
+  copyBudget: (data) => api.post('/budget/copy', data),
+  getSpendingAnalysis: (month, year) => api.get(`/budget/${month}/${year}/spending-analysis`),
+};
+
+// ==================== Card Transactions API ====================
+export const cardTransactionsApi = {
+  create: (data) => api.post('/card-transactions', data),
+  list: (params) => api.get('/card-transactions', { params }),
+  update: (id, data) => api.patch(`/card-transactions/${id}`, data),
+  delete: (id) => api.delete(`/card-transactions/${id}`),
+  merchantAutocomplete: (q) => api.get('/card-transactions/merchants/autocomplete', { params: { q } }),
+};
+
 export default api;

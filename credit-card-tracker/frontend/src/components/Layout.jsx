@@ -15,8 +15,10 @@ import {
   Calendar,
   BarChart3,
   PiggyBank,
-  TrendingUp
+  TrendingUp,
+  Plus
 } from 'lucide-react';
+import QuickExpenseModal from './QuickExpenseModal';
 
 const navigation = [
   { name: 'Monthly', href: '/monthly', icon: CalendarDays },
@@ -34,6 +36,7 @@ const navigation = [
 
 export default function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [quickExpenseOpen, setQuickExpenseOpen] = useState(false);
   const { user, signOut } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
@@ -157,6 +160,22 @@ export default function Layout() {
           <Outlet />
         </main>
       </div>
+
+      {/* FAB — Quick Expense */}
+      <button
+        onClick={() => setQuickExpenseOpen(true)}
+        className="fixed bottom-6 right-6 w-14 h-14 rounded-full bg-zinc-900 text-white shadow-lg hover:bg-zinc-800 flex items-center justify-center z-40"
+        aria-label="Registrar gasto rápido"
+      >
+        <Plus className="w-6 h-6" />
+      </button>
+
+      {quickExpenseOpen && (
+        <QuickExpenseModal
+          onClose={() => setQuickExpenseOpen(false)}
+          onSaved={() => {/* el modal ya gestiona el flujo; el refetch ocurre al re-abrir páginas */}}
+        />
+      )}
     </div>
   );
 }

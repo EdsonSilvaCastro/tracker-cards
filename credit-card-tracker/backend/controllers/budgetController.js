@@ -143,7 +143,7 @@ const upsertMonthlyBudget = async (req, res) => {
 // Add or update an expense
 const upsertExpense = async (req, res) => {
   try {
-    const { month, year, section, expense_name, budgeted_amount, actual_spent, status, notes } = req.body;
+    const { month, year, section, expense_name, budgeted_amount, actual_spent, status, notes, paid_with } = req.body;
 
     if (!Object.keys(SECTIONS).includes(section)) {
       return res.status(400).json({ success: false, error: 'Invalid section' });
@@ -160,7 +160,8 @@ const upsertExpense = async (req, res) => {
         budgeted_amount: parseFloat(budgeted_amount) || 0,
         actual_spent: parseFloat(actual_spent) || 0,
         status: status || 'pending',
-        notes: notes || null
+        notes: notes || null,
+        paid_with: paid_with !== undefined ? paid_with : null
       }, {
         onConflict: 'user_id,month,year,section,expense_name'
       })
@@ -180,7 +181,6 @@ const upsertExpense = async (req, res) => {
 const updateExpense = async (req, res) => {
   try {
     const { id } = req.params;
-    const { expense_name, budgeted_amount, actual_spent, status, notes } = req.body;
 
     // Verify ownership
     const { data: existing, error: existingError } = await supabaseAdmin
@@ -194,12 +194,15 @@ const updateExpense = async (req, res) => {
       return res.status(404).json({ success: false, error: 'Expense not found' });
     }
 
+    const { expense_name, budgeted_amount, actual_spent, status, notes, paid_with } = req.body;
+
     const updateData = {};
     if (expense_name !== undefined) updateData.expense_name = expense_name;
     if (budgeted_amount !== undefined) updateData.budgeted_amount = parseFloat(budgeted_amount);
     if (actual_spent !== undefined) updateData.actual_spent = parseFloat(actual_spent);
     if (status !== undefined) updateData.status = status;
     if (notes !== undefined) updateData.notes = notes;
+    if (paid_with !== undefined) updateData.paid_with = paid_with;
 
     const { data, error } = await supabaseAdmin
       .from('monthly_budget_expenses')
@@ -320,11 +323,92 @@ const copyBudget = async (req, res) => {
   }
 };
 
+// Spending analysis: in-plan vs out-of-plan breakdown
+const getSpendingAnalysis = async (req, res) => {
+  try {
+    const { month, year } = req.params;
+    const monthNum = parseInt(month);
+    const yearNum = parseInt(year);
+
+    // Get user's cards for this month from monthly_card_balances
+    const { data: balances, error: balancesError } = await supabaseAdmin
+      .from('monthly_card_balances')
+      .select(`
+        card_id,
+        amount_to_pay,
+        credit_cards ( id, card_name, bank )
+      `)
+      .eq('month', monthNum)
+      .eq('year', yearNum)
+      .eq('credit_cards.user_id', req.user.id);
+
+    if (balancesError) throw balancesError;
+
+    // Filter to only the user's cards
+    const userBalances = (balances || []).filter(b => b.credit_cards !== null);
+
+    // Get budget expenses for the month
+    const { data: expenses, error: expensesError } = await supabaseAdmin
+      .from('monthly_budget_expenses')
+      .select('actual_spent, paid_with')
+      .eq('user_id', req.user.id)
+      .eq('month', monthNum)
+      .eq('year', yearNum);
+
+    if (expensesError) throw expensesError;
+
+    const total_spent_on_cards = userBalances.reduce(
+      (sum, b) => sum + parseFloat(b.amount_to_pay || 0), 0
+    );
+
+    // In-plan = expenses assigned to a card (not cash, not null)
+    const inPlanExpenses = (expenses || []).filter(
+      e => e.paid_with && e.paid_with !== 'cash'
+    );
+    const total_in_plan = inPlanExpenses.reduce(
+      (sum, e) => sum + parseFloat(e.actual_spent || 0), 0
+    );
+    const total_out_of_plan = Math.max(0, total_spent_on_cards - total_in_plan);
+
+    // Per-card breakdown
+    const cards_breakdown = userBalances.map(b => {
+      const card_total = parseFloat(b.amount_to_pay || 0);
+      const in_plan = (expenses || [])
+        .filter(e => e.paid_with === b.card_id)
+        .reduce((sum, e) => sum + parseFloat(e.actual_spent || 0), 0);
+      const out_of_plan = Math.max(0, card_total - in_plan);
+      return {
+        card_id: b.card_id,
+        card_name: b.credit_cards.card_name,
+        bank: b.credit_cards.bank,
+        total_spent: card_total,
+        in_plan,
+        out_of_plan,
+        in_plan_percentage: card_total > 0 ? (in_plan / card_total) * 100 : 0
+      };
+    });
+
+    res.json({
+      success: true,
+      data: {
+        total_spent_on_cards,
+        total_in_plan,
+        total_out_of_plan,
+        cards_breakdown
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching spending analysis:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+
 export {
   getMonthlyBudget,
   upsertMonthlyBudget,
   upsertExpense,
   updateExpense,
   deleteExpense,
-  copyBudget
+  copyBudget,
+  getSpendingAnalysis
 };

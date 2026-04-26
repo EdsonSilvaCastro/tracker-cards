@@ -9,7 +9,7 @@ import Cards from './pages/Cards';
 import Statements from './pages/Statements';
 import Payments from './pages/Payments';
 import Transactions from './pages/Transactions';
-import MonthlyOverview from './pages/MonthlyOverview';
+import MonthlyOverview from './pages/monthly/MonthlyOverview';
 import PaymentDueDates from './pages/PaymentDueDates';
 import MonthlyComparison from './pages/MonthlyComparison';
 import SavingsGoals from './pages/SavingsGoals';

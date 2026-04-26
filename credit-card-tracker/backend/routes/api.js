@@ -8,8 +8,13 @@ import * as monthlyBalancesController from '../controllers/monthlyBalancesContro
 import * as budgetController from '../controllers/budgetController.js';
 import * as savingsController from '../controllers/savingsController.js';
 import * as analyticsController from '../controllers/analyticsController.js';
+import * as cardTransactionsController from '../controllers/cardTransactionsController.js';
+import * as telegramController from '../controllers/telegramController.js';
 
 const router = express.Router();
+
+// ==================== Telegram Webhook (sin auth JWT — debe ir ANTES del middleware) ====================
+router.post('/telegram/webhook', telegramController.handleWebhook);
 
 // All routes require authentication
 router.use(authenticateUser);
@@ -33,6 +38,7 @@ router.delete('/monthly-balances/:id', monthlyBalancesController.deleteMonthlyBa
 
 // ==================== Budget Routes ====================
 router.get('/budget/:month/:year', budgetController.getMonthlyBudget);
+router.get('/budget/:month/:year/spending-analysis', budgetController.getSpendingAnalysis);
 router.post('/budget', budgetController.upsertMonthlyBudget);
 router.post('/budget/expense', budgetController.upsertExpense);
 router.post('/budget/copy', budgetController.copyBudget);
@@ -76,5 +82,13 @@ router.delete('/savings/:id', savingsController.deleteSavingsGoal);
 router.get('/analytics/annual/:year', analyticsController.getAnnualSummary);
 router.get('/analytics/compare', analyticsController.compareMonths);
 router.get('/analytics/trends', analyticsController.getSpendingTrends);
+
+// ==================== Card Transactions Routes ====================
+// Nota: autocomplete ANTES de /:id para que Express no lo capture como param
+router.get('/card-transactions/merchants/autocomplete', cardTransactionsController.getMerchantAutocomplete);
+router.get('/card-transactions', cardTransactionsController.getTransactions);
+router.post('/card-transactions', cardTransactionsController.createTransaction);
+router.patch('/card-transactions/:id', cardTransactionsController.updateTransaction);
+router.delete('/card-transactions/:id', cardTransactionsController.deleteTransaction);
 
 export default router;
