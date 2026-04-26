@@ -16,6 +16,13 @@ const MONTHS_EN = [
   'July', 'August', 'September', 'October', 'November', 'December',
 ];
 
+const SECTION_NAMES = {
+  living_expenses: 'Living Expenses',
+  life_style: 'Life Style',
+  monthly_payments: 'Monthly Payments',
+  general_expenses: 'General Expenses',
+};
+
 const formatCurrency = (amount) =>
   new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(amount || 0);
 
@@ -32,6 +39,7 @@ export default function MonthlyOverview() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [copyMessage, setCopyMessage] = useState(null); // { text, warning }
   const [deleteConfirm, setDeleteConfirm] = useState(null);
 
   // Accordion expand state
@@ -452,7 +460,7 @@ export default function MonthlyOverview() {
     }
     setSaving(true);
     try {
-      await api.post('/budget/copy', {
+      const res = await api.post('/budget/copy', {
         from_month: parseInt(copyForm.from_month),
         from_year: parseInt(copyForm.from_year),
         to_month: currentMonth,
@@ -461,6 +469,20 @@ export default function MonthlyOverview() {
       });
       setShowCopyModal(false);
       fetchAllData();
+
+      const stats = res.data?.stats;
+      if (stats) {
+        const details = [];
+        if (stats.with_card_assignment > 0) details.push(`${stats.with_card_assignment} con tarjeta`);
+        if (stats.paid_with_cash > 0) details.push(`${stats.paid_with_cash} en efectivo`);
+        if (stats.unassigned > 0) details.push(`${stats.unassigned} sin asignar`);
+        let text = `Copiados ${stats.total_copied} expenses`;
+        if (details.length > 0) text += ` (${details.join(', ')})`;
+        const warning = stats.dropped_due_to_inactive_card > 0
+          ? `⚠️ ${stats.dropped_due_to_inactive_card} expense(s) tenían tarjeta inactiva — quedaron sin asignar.`
+          : null;
+        setCopyMessage({ text, warning });
+      }
     } catch (err) {
       console.error('Error copying budget:', err);
       alert('Failed to copy budget');
@@ -487,7 +509,28 @@ export default function MonthlyOverview() {
         return;
       }
 
+      // Cargar tarjetas activas para resolver paid_with
+      const cardsRes = await api.get('/cards');
+      const activeCardIds = new Set(
+        (cardsRes.data?.data || []).filter(c => c.is_active !== false).map(c => c.id)
+      );
+
+      const resolvePaidWith = (pw) => {
+        if (pw === null || pw === undefined) return null;
+        if (pw === 'cash') return 'cash';
+        return activeCardIds.has(pw) ? pw : null;
+      };
+
+      let copiedWithCard = 0, copiedAsCash = 0, copiedUnassigned = 0, droppedInactive = 0;
+
       for (const expense of sourceSection.expenses) {
+        const resolved = resolvePaidWith(expense.paid_with);
+        if (resolved === null && expense.paid_with !== null && expense.paid_with !== undefined && expense.paid_with !== 'cash') {
+          droppedInactive++;
+        } else if (resolved === 'cash') copiedAsCash++;
+        else if (resolved !== null) copiedWithCard++;
+        else copiedUnassigned++;
+
         await api.post('/budget/expense', {
           month: currentMonth,
           year: currentYear,
@@ -496,13 +539,26 @@ export default function MonthlyOverview() {
           budgeted_amount: expense.budgeted_amount,
           actual_spent: copySectionForm.include_actual ? expense.actual_spent : 0,
           status: 'pending',
-          paid_with: null,
+          paid_with: resolved,
+          auto_created: expense.auto_created || false,
         });
       }
 
       setShowCopySectionModal(false);
       setCopySectionKey(null);
       fetchAllData();
+
+      const total = sourceSection.expenses.length;
+      const details = [];
+      if (copiedWithCard > 0) details.push(`${copiedWithCard} con tarjeta`);
+      if (copiedAsCash > 0) details.push(`${copiedAsCash} en efectivo`);
+      if (copiedUnassigned > 0) details.push(`${copiedUnassigned} sin asignar`);
+      let text = `Copiados ${total} expenses de ${SECTION_NAMES[copySectionKey] || copySectionKey}`;
+      if (details.length > 0) text += ` (${details.join(', ')})`;
+      const warning = droppedInactive > 0
+        ? `⚠️ ${droppedInactive} expense(s) tenían tarjeta inactiva — quedaron sin asignar.`
+        : null;
+      setCopyMessage({ text, warning });
     } catch (err) {
       console.error('Error copying section budget:', err);
       alert('Failed to copy section budget');
@@ -582,6 +638,18 @@ export default function MonthlyOverview() {
         <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700 flex items-center gap-2">
           <AlertCircle className="h-5 w-5" />
           {error}
+        </div>
+      )}
+
+      {copyMessage && (
+        <div className={`rounded-lg p-3 flex items-start justify-between gap-2 text-sm ${
+          copyMessage.warning ? 'bg-amber-50 border border-amber-200 text-amber-800' : 'bg-green-50 border border-green-200 text-green-800'
+        }`}>
+          <div>
+            <p className="font-medium">{copyMessage.text}</p>
+            {copyMessage.warning && <p className="mt-0.5 text-amber-700">{copyMessage.warning}</p>}
+          </div>
+          <button onClick={() => setCopyMessage(null)} className="text-gray-400 hover:text-gray-600 flex-shrink-0">✕</button>
         </div>
       )}
 

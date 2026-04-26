@@ -294,6 +294,41 @@ const copyBudget = async (req, res) => {
         });
     }
 
+    // Cargar tarjetas activas para validar paid_with
+    const { data: activeCards } = await supabaseAdmin
+      .from('credit_cards')
+      .select('id')
+      .eq('is_active', true);
+
+    const activeCardIds = new Set((activeCards || []).map(c => c.id));
+
+    // Resolver paid_with según las reglas: cash→cash, UUID activo→UUID, UUID inactivo→null, null→null
+    function resolvePaidWith(originalPaidWith) {
+      if (originalPaidWith === null || originalPaidWith === undefined) return null;
+      if (originalPaidWith === 'cash') return 'cash';
+      if (activeCardIds.has(originalPaidWith)) return originalPaidWith;
+      return null; // tarjeta inactiva o eliminada
+    }
+
+    // Calcular estadísticas antes del insert
+    let copiedWithCard = 0;
+    let copiedAsCash = 0;
+    let copiedUnassigned = 0;
+    let droppedDueToInactiveCard = 0;
+
+    sourceExpenses.forEach(exp => {
+      const resolved = resolvePaidWith(exp.paid_with);
+      if (resolved === null && exp.paid_with !== null && exp.paid_with !== undefined && exp.paid_with !== 'cash') {
+        droppedDueToInactiveCard++;
+      } else if (resolved === 'cash') {
+        copiedAsCash++;
+      } else if (resolved !== null) {
+        copiedWithCard++;
+      } else {
+        copiedUnassigned++;
+      }
+    });
+
     // Copy expenses - always set status to pending
     const newExpenses = sourceExpenses.map(exp => ({
       user_id: req.user.id,
@@ -304,6 +339,8 @@ const copyBudget = async (req, res) => {
       budgeted_amount: exp.budgeted_amount,
       actual_spent: include_actual_spent ? exp.actual_spent : 0,
       status: 'pending', // Always reset to pending when copying
+      paid_with: resolvePaidWith(exp.paid_with),
+      auto_created: exp.auto_created || false,
       notes: exp.notes
     }));
 
@@ -316,7 +353,18 @@ const copyBudget = async (req, res) => {
 
     if (error) throw error;
 
-    res.json({ success: true, data, message: `Copied ${data.length} expenses` });
+    res.json({
+      success: true,
+      data,
+      message: `Copied ${data.length} expenses`,
+      stats: {
+        total_copied: data.length,
+        with_card_assignment: copiedWithCard,
+        paid_with_cash: copiedAsCash,
+        unassigned: copiedUnassigned,
+        dropped_due_to_inactive_card: droppedDueToInactiveCard,
+      },
+    });
   } catch (error) {
     console.error('Error copying budget:', error);
     res.status(500).json({ success: false, error: error.message });
