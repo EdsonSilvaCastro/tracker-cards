@@ -295,9 +295,7 @@ MIT License - Feel free to use for your own projects
 
 ## 👨‍💻 Author
 
-**Ed** - Building towards financial freedom 🎯
-- Target: 50,000 MXN monthly passive income
-- Strategy: 45% savings rate + systematic DCA investing
+**Ed** 
 
 ---
 
