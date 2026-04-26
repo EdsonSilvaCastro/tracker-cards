@@ -66,19 +66,21 @@ export default function ExpenseRow({
             className="flex-1 text-sm font-medium px-1 py-0.5 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 min-w-[100px]"
           />
         ) : (
-          <span
-            onClick={() => onStartInlineEdit(expense, 'expense_name')}
-            className="flex-1 font-medium text-gray-900 cursor-pointer hover:text-blue-600 truncate text-sm min-w-[80px]"
-            title="Clic para editar"
-          >
-            {expense.expense_name}
-          </span>
-          {expense.auto_created && (
+          <>
             <span
-              className="inline-block w-1.5 h-1.5 rounded-full bg-zinc-400 flex-shrink-0"
-              title="Creado automáticamente desde una transacción sin match"
-            />
-          )}
+              onClick={() => onStartInlineEdit(expense, 'expense_name')}
+              className="flex-1 font-medium text-gray-900 cursor-pointer hover:text-blue-600 truncate text-sm min-w-[80px]"
+              title="Clic para editar"
+            >
+              {expense.expense_name}
+            </span>
+            {expense.auto_created && (
+              <span
+                className="inline-block w-1.5 h-1.5 rounded-full bg-zinc-400 flex-shrink-0"
+                title="Creado automáticamente desde una transacción sin match"
+              />
+            )}
+          </>
         )}
 
         {/* paid_with pill */}
