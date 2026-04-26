@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import {
@@ -37,9 +37,20 @@ const navigation = [
 export default function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [quickExpenseOpen, setQuickExpenseOpen] = useState(false);
+  const [savedMsg, setSavedMsg] = useState(null);
+  const savedTimerRef = useRef(null);
   const { user, signOut } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
+
+  const handleSaved = (msg) => {
+    setSavedMsg(msg || 'Gasto guardado.');
+    clearTimeout(savedTimerRef.current);
+    savedTimerRef.current = setTimeout(() => setSavedMsg(null), 3500);
+  };
+
+  // Limpiar timer al desmontar
+  useEffect(() => () => clearTimeout(savedTimerRef.current), []);
 
   const handleSignOut = async () => {
     await signOut();
@@ -173,8 +184,15 @@ export default function Layout() {
       {quickExpenseOpen && (
         <QuickExpenseModal
           onClose={() => setQuickExpenseOpen(false)}
-          onSaved={() => {/* el modal ya gestiona el flujo; el refetch ocurre al re-abrir páginas */}}
+          onSaved={(msg) => { handleSaved(msg); }}
         />
+      )}
+
+      {/* Toast de confirmación */}
+      {savedMsg && (
+        <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-50 bg-zinc-900 text-white text-sm px-4 py-2.5 rounded-xl shadow-lg max-w-sm text-center">
+          {savedMsg}
+        </div>
       )}
     </div>
   );

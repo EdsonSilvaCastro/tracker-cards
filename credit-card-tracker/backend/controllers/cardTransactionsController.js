@@ -1,6 +1,7 @@
 import { supabaseAdmin } from '../config/supabase.js';
 import { calculateBillingCycle, isInAmbiguousZone } from '../utils/billingCycle.js';
 import { findMatchingExpense, recordAliasUsage } from '../utils/merchantMatching.js';
+import { autoCreateExpenseAndLink } from '../utils/autoCreateExpense.js';
 
 // ---------------------------------------------------------------------------
 // POST /api/card-transactions
@@ -76,9 +77,31 @@ export const createTransaction = async (req, res) => {
 
     // Resolver linked_expense_id si no viene explícito (matching por alias)
     let resolvedExpenseId = linked_expense_id || null;
+    let autoCreatedExpense = null;
     if (!resolvedExpenseId) {
       const matched = await findMatchingExpense(merchant, billingMonth, billingYear, userId);
-      if (matched) resolvedExpenseId = matched.id;
+      if (matched) {
+        resolvedExpenseId = matched.id;
+      } else {
+        // Sin match — auto-crear expense en General expenses si el cliente lo permite
+        const shouldAutoCreate = req.body.auto_create_expense !== false; // default true
+        if (shouldAutoCreate) {
+          try {
+            autoCreatedExpense = await autoCreateExpenseAndLink({
+              merchant: merchant.trim(),
+              amount: parseFloat(amount),
+              cardId: card_id,
+              billingMonth,
+              billingYear,
+              userId,
+            });
+            resolvedExpenseId = autoCreatedExpense.id;
+          } catch (err) {
+            console.error('Auto-create expense failed:', err);
+            // Continuar sin vincular si falla
+          }
+        }
+      }
     }
 
     // Insertar transacción
@@ -102,7 +125,8 @@ export const createTransaction = async (req, res) => {
     if (txError) throw txError;
 
     // Actualizar actual_spent del expense vinculado
-    if (resolvedExpenseId) {
+    // (si fue auto-creado, actual_spent ya se insertó con el monto correcto; no sumar de nuevo)
+    if (resolvedExpenseId && !autoCreatedExpense) {
       await updateExpenseSpent(resolvedExpenseId, parseFloat(amount));
 
       // Guardar alias para próximas veces si viene de matching automático y no era explícito
@@ -116,7 +140,23 @@ export const createTransaction = async (req, res) => {
       }
     }
 
-    res.status(201).json({ success: true, data: transaction });
+    // Obtener el expense vinculado para incluirlo en la respuesta
+    let linkedExpense = autoCreatedExpense || null;
+    if (resolvedExpenseId && !linkedExpense) {
+      const { data: exp } = await supabaseAdmin
+        .from('monthly_budget_expenses')
+        .select('id, name, section')
+        .eq('id', resolvedExpenseId)
+        .single();
+      linkedExpense = exp || null;
+    }
+
+    res.status(201).json({
+      success: true,
+      data: transaction,
+      linked_expense: linkedExpense,
+      auto_created: !!autoCreatedExpense,
+    });
   } catch (error) {
     console.error('Error creating card transaction:', error);
     res.status(500).json({ success: false, error: error.message });

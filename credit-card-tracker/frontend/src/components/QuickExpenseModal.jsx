@@ -16,6 +16,7 @@ export default function QuickExpenseModal({ onClose, onSaved }) {
   const [merchantSuggestions, setMerchantSuggestions] = useState([]);
   const [matchedExpense, setMatchedExpense] = useState(null);
   const [confirmedMatch, setConfirmedMatch] = useState(false);
+  const [autoCreateExpense, setAutoCreateExpense] = useState(true);
   const [billingConflict, setBillingConflict] = useState(null); // { options, suggested }
   const [chosenBilling, setChosenBilling] = useState(null);
   const [activeCards, setActiveCards] = useState([]);
@@ -56,6 +57,7 @@ export default function QuickExpenseModal({ onClose, onSaved }) {
     setMerchant(value);
     setMatchedExpense(null);
     setConfirmedMatch(false);
+    setAutoCreateExpense(true);
     fetchSuggestions(value);
   };
 
@@ -75,6 +77,7 @@ export default function QuickExpenseModal({ onClose, onSaved }) {
     merchant: merchant.trim() || 'Sin nombre',
     source: 'manual',
     linked_expense_id: confirmedMatch && matchedExpense ? matchedExpense.id : undefined,
+    auto_create_expense: !confirmedMatch && autoCreateExpense,
     ...(billing
       ? { confirmed_billing_month: billing.billing_month, confirmed_billing_year: billing.billing_year }
       : {}),
@@ -105,19 +108,28 @@ export default function QuickExpenseModal({ onClose, onSaved }) {
         return;
       }
 
-      onSaved?.();
+      const responseData = res.data;
+      const savedMessage = responseData?.auto_created
+        ? `Guardado. Creé "${responseData.linked_expense?.name}" en General expenses.`
+        : responseData?.linked_expense
+          ? `Guardado y vinculado a "${responseData.linked_expense.name}".`
+          : 'Gasto guardado.';
+
       if (keepOpen) {
         // "Guardar y otro": limpiar campos pero mantener tarjeta
+        onSaved?.(savedMessage);
         setAmount('');
         setMerchant('');
         setMerchantSuggestions([]);
         setMatchedExpense(null);
         setConfirmedMatch(false);
+        setAutoCreateExpense(true);
         setBillingConflict(null);
         setChosenBilling(null);
         amountRef.current?.focus();
       } else {
         onClose();
+        onSaved?.(savedMessage);
       }
     } catch (err) {
       // axios pone la respuesta en err.response
@@ -270,6 +282,22 @@ export default function QuickExpenseModal({ onClose, onSaved }) {
               <button onClick={() => { setConfirmedMatch(false); setMatchedExpense(null); }}
                 className="ml-auto text-xs text-gray-400 hover:text-gray-600">✕</button>
             </div>
+          )}
+
+          {/* Toggle auto-create — solo cuando no hay match confirmado */}
+          {!matchedExpense && merchant.trim().length > 0 && (
+            <label className="flex items-center gap-2 text-xs text-zinc-600 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={autoCreateExpense}
+                onChange={(e) => setAutoCreateExpense(e.target.checked)}
+                className="rounded border-zinc-300"
+              />
+              <span>
+                Crear como nuevo expense en{' '}
+                <span className="font-medium">General expenses</span>
+              </span>
+            </label>
           )}
 
           {/* Billing conflict dialog */}

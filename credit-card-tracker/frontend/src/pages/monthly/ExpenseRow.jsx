@@ -73,6 +73,12 @@ export default function ExpenseRow({
           >
             {expense.expense_name}
           </span>
+          {expense.auto_created && (
+            <span
+              className="inline-block w-1.5 h-1.5 rounded-full bg-zinc-400 flex-shrink-0"
+              title="Creado automáticamente desde una transacción sin match"
+            />
+          )}
         )}
 
         {/* paid_with pill */}

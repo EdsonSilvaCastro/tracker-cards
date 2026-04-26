@@ -2,6 +2,7 @@ import { parseExpenseMessage } from '../services/claudeService.js';
 import { sendMessage, isAuthorized } from '../services/telegramService.js';
 import { calculateBillingCycle, isInAmbiguousZone } from '../utils/billingCycle.js';
 import { findMatchingExpense, recordAliasUsage } from '../utils/merchantMatching.js';
+import { autoCreateExpenseAndLink } from '../utils/autoCreateExpense.js';
 import { supabaseAdmin } from '../config/supabase.js';
 
 // Estado conversacional en memoria (simple, para uso personal de un solo usuario)
@@ -185,7 +186,25 @@ async function saveTransactionAndConfirm(chatId, parsed, card, transactionDate, 
   const merchantName = parsed.merchant || parsed.expense_hint || 'Sin nombre';
 
   // Buscar match con expense del budget
-  const matchedExpense = await findMatchingExpense(merchantName, billingMonth, billingYear, userId);
+  let linkedExpense = await findMatchingExpense(merchantName, billingMonth, billingYear, userId);
+  let wasAutoCreated = false;
+
+  // Sin match — auto-crear expense en General expenses (bot siempre auto-crea)
+  if (!linkedExpense) {
+    try {
+      linkedExpense = await autoCreateExpenseAndLink({
+        merchant: merchantName,
+        amount: parsed.amount,
+        cardId: card.id,
+        billingMonth,
+        billingYear,
+        userId,
+      });
+      wasAutoCreated = true;
+    } catch (err) {
+      console.error('Auto-create expense failed in telegram flow:', err);
+    }
+  }
 
   // Insertar transacción
   const { data: transaction, error } = await supabaseAdmin
@@ -198,7 +217,7 @@ async function saveTransactionAndConfirm(chatId, parsed, card, transactionDate, 
       transaction_date: transactionDate.toISOString().split('T')[0],
       billing_month: billingMonth,
       billing_year: billingYear,
-      linked_expense_id: matchedExpense?.id || null,
+      linked_expense_id: linkedExpense?.id || null,
       source: 'telegram',
     })
     .select()
@@ -210,14 +229,15 @@ async function saveTransactionAndConfirm(chatId, parsed, card, transactionDate, 
   }
 
   // Actualizar actual_spent del expense vinculado
-  if (matchedExpense) {
-    const newSpent = parseFloat(matchedExpense.actual_spent || 0) + parsed.amount;
-    const newStatus = newSpent >= parseFloat(matchedExpense.budgeted_amount || 0) ? 'paid' : matchedExpense.status;
+  // (si fue auto-creado, actual_spent ya se insertó con el monto correcto; no sumar de nuevo)
+  if (linkedExpense && !wasAutoCreated) {
+    const newSpent = parseFloat(linkedExpense.actual_spent || 0) + parsed.amount;
+    const newStatus = newSpent >= parseFloat(linkedExpense.budgeted_amount || 0) ? 'paid' : linkedExpense.status;
     await supabaseAdmin
       .from('monthly_budget_expenses')
       .update({ actual_spent: newSpent, status: newStatus })
-      .eq('id', matchedExpense.id);
-    await recordAliasUsage(merchantName, matchedExpense, userId);
+      .eq('id', linkedExpense.id);
+    await recordAliasUsage(merchantName, linkedExpense, userId);
   }
 
   conversationState.delete(chatId);
@@ -225,10 +245,10 @@ async function saveTransactionAndConfirm(chatId, parsed, card, transactionDate, 
   // Mensaje de confirmación
   let msg = `✅ *$${parsed.amount}* en ${card.card_name}\n`;
   msg += `_${transaction.merchant}_\n`;
-  if (matchedExpense) {
-    msg += `🎯 Vinculado a *${matchedExpense.name}* (${matchedExpense.section})\n`;
-  } else if (parsed.expense_hint) {
-    msg += `⚠️ No encontré _"${parsed.expense_hint}"_ en tu budget. Quedó sin vincular.\n`;
+  if (wasAutoCreated) {
+    msg += `🆕 Creé *${linkedExpense.name}* en General expenses\n`;
+  } else if (linkedExpense) {
+    msg += `🎯 Vinculado a *${linkedExpense.name}* (${linkedExpense.section})\n`;
   }
   msg += `📅 Ciclo: ${monthName(billingMonth)} ${billingYear}`;
 
