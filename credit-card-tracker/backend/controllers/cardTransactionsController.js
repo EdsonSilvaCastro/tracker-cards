@@ -98,7 +98,11 @@ export const createTransaction = async (req, res) => {
             resolvedExpenseId = autoCreatedExpense.id;
           } catch (err) {
             console.error('Auto-create expense failed:', err);
-            // Continuar sin vincular si falla
+            return res.status(500).json({
+              success: false,
+              error: 'auto_create_failed',
+              message: err.message,
+            });
           }
         }
       }
@@ -145,7 +149,7 @@ export const createTransaction = async (req, res) => {
     if (resolvedExpenseId && !linkedExpense) {
       const { data: exp } = await supabaseAdmin
         .from('monthly_budget_expenses')
-        .select('id, name, section')
+        .select('id, expense_name, section')
         .eq('id', resolvedExpenseId)
         .single();
       linkedExpense = exp || null;
@@ -187,7 +191,7 @@ export const getTransactions = async (req, res) => {
       .select(`
         *,
         credit_cards (id, card_name, bank),
-        monthly_budget_expenses (id, name, section)
+        monthly_budget_expenses (id, expense_name, section)
       `)
       .eq('user_id', userId)
       .order('transaction_date', { ascending: false })

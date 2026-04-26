@@ -30,9 +30,9 @@ export async function findMatchingExpense(merchant, billingMonth, billingYear, u
     .eq('user_id', userId)
     .eq('month', billingMonth)
     .eq('year', billingYear)
-    .eq('name', alias.expense_name)
+    .eq('expense_name', alias.expense_name)
     .eq('section', alias.expense_section)
-    .single();
+    .maybeSingle();
 
   return expense || null;
 }
@@ -52,7 +52,7 @@ export async function recordAliasUsage(merchant, expense, userId) {
         user_id: userId,
         merchant_normalized: normalized,
         expense_template_id: expense.id,
-        expense_name: expense.name,
+        expense_name: expense.expense_name,
         expense_section: expense.section,
         use_count: 1,
         last_used_at: new Date().toISOString(),

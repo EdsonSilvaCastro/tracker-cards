@@ -12,18 +12,46 @@ const conversationState = new Map();
 // POST /api/telegram/webhook  — Telegram llama aquí en cada mensaje
 // ---------------------------------------------------------------------------
 export async function handleWebhook(req, res) {
-  // Siempre responder 200 rápido para que Telegram no reintente
-  res.sendStatus(200);
-
   const update = req.body;
+  const updateId = update?.update_id;
   const chatId = update?.message?.chat?.id;
   const text = update?.message?.text;
 
-  if (!chatId || !text) return;
+  // Responder 200 INMEDIATAMENTE — Telegram no debe esperar la lógica
+  res.sendStatus(200);
+
+  if (!updateId || !chatId || !text) return;
 
   if (!isAuthorized(chatId)) {
     await sendMessage(chatId, 'No autorizado.');
     return;
+  }
+
+  // Idempotencia: verificar si ya procesamos este update_id
+  const { data: existing } = await supabaseAdmin
+    .from('processed_telegram_updates')
+    .select('update_id')
+    .eq('update_id', updateId)
+    .maybeSingle();
+
+  if (existing) {
+    console.log(`Skipping duplicate update_id ${updateId}`);
+    return;
+  }
+
+  // Marcar como procesado ANTES de procesar (evita race conditions)
+  const { error: insertError } = await supabaseAdmin
+    .from('processed_telegram_updates')
+    .insert({ update_id: updateId, chat_id: chatId, message_text: text });
+
+  if (insertError) {
+    // Unique constraint violation: otra invocación ya ganó la carrera
+    if (insertError.code === '23505') {
+      console.log(`Race condition: update_id ${updateId} ya procesado por otra request`);
+      return;
+    }
+    console.error('Error registrando update_id:', insertError);
+    // Continuar de todas formas — mejor procesar que perder el mensaje
   }
 
   try {
@@ -68,7 +96,7 @@ async function processMessage(chatId, text) {
   const today = new Date();
   const { data: currentExpenses } = await supabaseAdmin
     .from('monthly_budget_expenses')
-    .select('id, name, section, budgeted_amount, actual_spent, status')
+    .select('id, expense_name, section, budgeted_amount, actual_spent, status')
     .eq('month', today.getMonth() + 1)
     .eq('year', today.getFullYear());
 
@@ -203,6 +231,13 @@ async function saveTransactionAndConfirm(chatId, parsed, card, transactionDate, 
       wasAutoCreated = true;
     } catch (err) {
       console.error('Auto-create expense failed in telegram flow:', err);
+      await sendMessage(chatId,
+        `⚠️ No pude registrar tu gasto.\n` +
+        `Error al crear el expense automáticamente: ${err.message}\n` +
+        `Intenta de nuevo o avísame si persiste.`
+      );
+      conversationState.delete(chatId);
+      return; // abortar: NO insertar la card_transaction huérfana
     }
   }
 
@@ -246,9 +281,9 @@ async function saveTransactionAndConfirm(chatId, parsed, card, transactionDate, 
   let msg = `✅ *$${parsed.amount}* en ${card.card_name}\n`;
   msg += `_${transaction.merchant}_\n`;
   if (wasAutoCreated) {
-    msg += `🆕 Creé *${linkedExpense.name}* en General expenses\n`;
+    msg += `🆕 Creé *${linkedExpense.expense_name}* en General expenses\n`;
   } else if (linkedExpense) {
-    msg += `🎯 Vinculado a *${linkedExpense.name}* (${linkedExpense.section})\n`;
+    msg += `🎯 Vinculado a *${linkedExpense.expense_name}* (${linkedExpense.section})\n`;
   }
   msg += `📅 Ciclo: ${monthName(billingMonth)} ${billingYear}`;
 

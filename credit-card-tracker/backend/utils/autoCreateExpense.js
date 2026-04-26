@@ -23,7 +23,7 @@ export async function autoCreateExpenseAndLink({
       month: billingMonth,
       year: billingYear,
       section: 'general_expenses',
-      name: expenseName,
+      expense_name: expenseName,
       budgeted_amount: 0,
       actual_spent: amount,
       status: 'paid',
