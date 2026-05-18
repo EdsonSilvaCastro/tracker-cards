@@ -6,6 +6,13 @@ export const getAnnualSummary = async (req, res) => {
     const { year } = req.params;
     const yearNum = parseInt(year);
 
+    // Get user's card IDs to filter monthly balances
+    const { data: userCards } = await supabaseAdmin
+      .from('credit_cards')
+      .select('id')
+      .eq('user_id', req.user.id);
+    const cardIds = (userCards || []).map(c => c.id);
+
     // Get all months data in parallel
     const monthPromises = [];
     for (let month = 1; month <= 12; month++) {
@@ -13,9 +20,9 @@ export const getAnnualSummary = async (req, res) => {
         Promise.all([
           // Monthly balances (cards)
           supabaseAdmin
-            .from('card_monthly_balances')
+            .from('monthly_card_balances')
             .select('*, credit_cards(card_name, bank)')
-            .eq('user_id', req.user.id)
+            .in('card_id', cardIds.length ? cardIds : ['00000000-0000-0000-0000-000000000000'])
             .eq('month', month)
             .eq('year', yearNum),
           // Budget data
@@ -99,12 +106,19 @@ export const compareMonths = async (req, res) => {
   try {
     const { month1, year1, month2, year2 } = req.query;
 
+    // Get user's card IDs to filter monthly balances
+    const { data: userCards } = await supabaseAdmin
+      .from('credit_cards')
+      .select('id')
+      .eq('user_id', req.user.id);
+    const cardIds = (userCards || []).map(c => c.id);
+
     const getMonthData = async (month, year) => {
       const [cardsResult, budgetResult, expensesResult] = await Promise.all([
         supabaseAdmin
-          .from('card_monthly_balances')
+          .from('monthly_card_balances')
           .select('*, credit_cards(card_name, bank)')
-          .eq('user_id', req.user.id)
+          .in('card_id', cardIds.length ? cardIds : ['00000000-0000-0000-0000-000000000000'])
           .eq('month', parseInt(month))
           .eq('year', parseInt(year)),
         supabaseAdmin
@@ -185,6 +199,13 @@ export const getSpendingTrends = async (req, res) => {
     const now = new Date();
     const trends = [];
 
+    // Get user's card IDs to filter monthly balances
+    const { data: userCards } = await supabaseAdmin
+      .from('credit_cards')
+      .select('id')
+      .eq('user_id', req.user.id);
+    const cardIds = (userCards || []).map(c => c.id);
+
     for (let i = 0; i < parseInt(numMonths); i++) {
       const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
       const month = date.getMonth() + 1;
@@ -192,9 +213,9 @@ export const getSpendingTrends = async (req, res) => {
 
       const [cardsResult, expensesResult] = await Promise.all([
         supabaseAdmin
-          .from('card_monthly_balances')
+          .from('monthly_card_balances')
           .select('amount_to_pay')
-          .eq('user_id', req.user.id)
+          .in('card_id', cardIds.length ? cardIds : ['00000000-0000-0000-0000-000000000000'])
           .eq('month', month)
           .eq('year', year),
         supabaseAdmin
