@@ -7,19 +7,19 @@ export function Button({
   type = 'button',
   ...props
 }) {
-  const baseStyles = 'inline-flex items-center justify-center font-medium rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed';
-  
+  const base = 'inline-flex items-center justify-center font-medium border-2 border-black transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-2 focus-visible:outline-offset-2';
+
   const variants = {
-    primary: 'bg-primary-600 text-white hover:bg-primary-700 focus:ring-primary-500',
-    secondary: 'bg-gray-100 text-gray-700 hover:bg-gray-200 focus:ring-gray-500',
-    danger: 'bg-red-600 text-white hover:bg-red-700 focus:ring-red-500',
-    outline: 'border border-gray-300 text-gray-700 hover:bg-gray-50 focus:ring-primary-500',
-    ghost: 'text-gray-600 hover:bg-gray-100 focus:ring-gray-500',
+    primary:   'bg-(--color-primary) text-black shadow-[3px_3px_0_0_#000] hover:shadow-[1px_1px_0_0_#000] hover:translate-y-0.5 hover:translate-x-0.5 active:shadow-none active:translate-y-1',
+    secondary: 'bg-black text-(--color-primary) shadow-[3px_3px_0_0_#ffdb33] hover:shadow-[1px_1px_0_0_#ffdb33] hover:translate-y-0.5 active:shadow-none active:translate-y-1',
+    danger:    'bg-(--color-destructive) text-white shadow-[3px_3px_0_0_#000] hover:shadow-[1px_1px_0_0_#000] hover:translate-y-0.5 active:shadow-none active:translate-y-1',
+    outline:   'bg-white text-black shadow-[3px_3px_0_0_#000] hover:shadow-[1px_1px_0_0_#000] hover:translate-y-0.5 active:shadow-none',
+    ghost:     'bg-transparent border-transparent text-black hover:bg-(--color-accent)',
   };
 
   const sizes = {
-    sm: 'px-3 py-1.5 text-sm',
-    md: 'px-4 py-2 text-sm',
+    sm: 'px-3 py-1 text-sm',
+    md: 'px-4 py-1.5 text-sm',
     lg: 'px-6 py-3 text-base',
   };
 
@@ -27,7 +27,7 @@ export function Button({
     <button
       type={type}
       disabled={disabled}
-      className={`${baseStyles} ${variants[variant]} ${sizes[size]} ${className}`}
+      className={`${base} ${variants[variant] ?? variants.primary} ${sizes[size]} ${className}`}
       {...props}
     >
       {children}

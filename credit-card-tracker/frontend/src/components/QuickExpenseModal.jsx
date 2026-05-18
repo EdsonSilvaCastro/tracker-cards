@@ -162,23 +162,26 @@ export default function QuickExpenseModal({ onClose, onSaved }) {
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
       {/* Backdrop */}
-      <div className="fixed inset-0 bg-black/50" onClick={onClose} />
+      <div className="fixed inset-0 bg-black/60" onClick={onClose} />
 
       {/* Panel */}
-      <div className="relative bg-white w-full sm:max-w-md sm:rounded-2xl rounded-t-2xl shadow-2xl overflow-hidden">
+      <div className="relative bg-white w-full sm:max-w-md border-2 border-black shadow-[6px_6px_0_0_#000] overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between px-5 pt-5 pb-3">
-          <h2 className="text-base font-semibold text-gray-900">Registrar gasto</h2>
-          <button onClick={onClose} className="p-1.5 rounded-lg text-gray-400 hover:bg-gray-100">
-            <X className="w-5 h-5" />
+        <div className="flex items-center justify-between px-5 py-4 border-b-2 border-black bg-(--color-primary)">
+          <h2 className="font-head text-base font-bold">Registrar gasto</h2>
+          <button
+            onClick={onClose}
+            className="p-1 border-2 border-black bg-white hover:bg-(--color-accent) transition-colors"
+          >
+            <X className="w-4 h-4" />
           </button>
         </div>
 
-        <div className="px-5 pb-5 space-y-4">
+        <div className="px-5 pb-5 pt-4 space-y-4">
           {/* Amount input */}
-          <div className="bg-gray-50 rounded-xl py-4 px-4 text-center">
+          <div className="border-2 border-black bg-black/5 py-4 px-4 text-center">
             <div className="flex items-center justify-center gap-1">
-              <span className="text-2xl font-light text-gray-400">$</span>
+              <span className="text-2xl font-black">$</span>
               <input
                 ref={amountRef}
                 type="number"
@@ -187,23 +190,23 @@ export default function QuickExpenseModal({ onClose, onSaved }) {
                 value={amount}
                 onChange={e => setAmount(e.target.value)}
                 placeholder="0.00"
-                className="text-4xl font-semibold text-gray-900 bg-transparent border-none outline-none w-40 text-center"
+                className="text-4xl font-black bg-transparent border-none outline-none w-40 text-center"
               />
             </div>
           </div>
 
           {/* Tarjetas — segmented buttons */}
           <div>
-            <p className="text-xs font-medium text-gray-500 mb-2">Tarjeta</p>
+            <p className="text-xs font-bold uppercase tracking-wide mb-2">Tarjeta</p>
             <div className="flex flex-wrap gap-2">
               {activeCards.map(card => (
                 <button
                   key={card.id}
                   onClick={() => { setSelectedCard(card); setBillingConflict(null); setChosenBilling(null); }}
-                  className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-colors ${
+                  className={`px-3 py-1.5 text-sm font-bold border-2 border-black transition-colors ${
                     selectedCard?.id === card.id
-                      ? 'bg-zinc-900 text-white border-zinc-900'
-                      : 'bg-white text-gray-700 border-gray-300 hover:border-zinc-400'
+                      ? 'bg-black text-white shadow-none translate-x-0.5 translate-y-0.5'
+                      : 'bg-white hover:bg-(--color-primary) shadow-[2px_2px_0_0_#000]'
                   }`}
                 >
                   {card.card_name}
@@ -211,19 +214,19 @@ export default function QuickExpenseModal({ onClose, onSaved }) {
               ))}
             </div>
             {billingPreview && (
-              <p className="mt-1.5 text-xs text-blue-600">{billingPreview}</p>
+              <p className="mt-1.5 text-xs font-bold border-l-4 border-black pl-2">{billingPreview}</p>
             )}
           </div>
 
           {/* Merchant input + autocomplete */}
           <div className="relative">
-            <p className="text-xs font-medium text-gray-500 mb-2">Comercio (opcional)</p>
+            <p className="text-xs font-bold uppercase tracking-wide mb-2">Comercio (opcional)</p>
             <input
               type="text"
               value={merchant}
               onChange={e => handleMerchantChange(e.target.value)}
               placeholder="Rappi, Uber, Netflix…"
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none focus:border-zinc-500"
+              className="w-full border-2 border-black px-3 py-2 text-sm font-bold outline-none focus:shadow-[2px_2px_0_0_#000] focus:translate-x-[-1px] focus:translate-y-[-1px] transition-all bg-white"
             />
             {merchantSuggestions.length > 0 && merchant === '' && (
               <div className="flex flex-wrap gap-1.5 mt-2">
@@ -231,7 +234,7 @@ export default function QuickExpenseModal({ onClose, onSaved }) {
                   <button
                     key={s.merchant}
                     onClick={() => { setMerchant(s.merchant); setMerchantSuggestions([]); }}
-                    className="px-2.5 py-1 bg-gray-100 text-gray-700 text-xs rounded-full hover:bg-gray-200"
+                    className="px-2.5 py-1 bg-black text-white text-xs font-bold hover:bg-(--color-primary) hover:text-black transition-colors"
                   >
                     {s.merchant}
                   </button>
@@ -239,11 +242,11 @@ export default function QuickExpenseModal({ onClose, onSaved }) {
               </div>
             )}
             {merchantSuggestions.length > 0 && merchant !== '' && (
-              <ul className="absolute z-10 w-full bg-white border border-gray-200 rounded-lg shadow-lg mt-1 overflow-hidden">
+              <ul className="absolute z-10 w-full bg-white border-2 border-black shadow-[4px_4px_0_0_#000] mt-1 overflow-hidden">
                 {merchantSuggestions.map(s => (
-                  <li key={s.merchant}>
+                  <li key={s.merchant} className="border-b border-black/20 last:border-b-0">
                     <button
-                      className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50"
+                      className="w-full text-left px-3 py-2 text-sm font-bold hover:bg-(--color-primary) transition-colors"
                       onClick={() => { setMerchant(s.merchant); setMerchantSuggestions([]); }}
                     >
                       {s.merchant}
@@ -256,63 +259,63 @@ export default function QuickExpenseModal({ onClose, onSaved }) {
 
           {/* Match con expense del budget */}
           {matchedExpense && !confirmedMatch && (
-            <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 flex items-start gap-3">
-              <span className="text-blue-500 mt-0.5">🎯</span>
+            <div className="border-2 border-black bg-(--color-primary) p-3 flex items-start gap-3">
+              <span className="mt-0.5">🎯</span>
               <div className="flex-1 min-w-0">
-                <p className="text-sm text-blue-800">
+                <p className="text-sm font-bold">
                   ¿Asignar a <strong>{matchedExpense.name}</strong> ({matchedExpense.section})?
                 </p>
               </div>
               <div className="flex gap-2 shrink-0">
                 <button
                   onClick={() => setMatchedExpense(null)}
-                  className="text-xs text-gray-500 hover:text-gray-700"
+                  className="text-xs font-bold px-2 py-0.5 border-2 border-black bg-white hover:bg-(--color-accent) transition-colors"
                 >No</button>
                 <button
                   onClick={() => setConfirmedMatch(true)}
-                  className="text-xs font-medium text-blue-700 hover:text-blue-900"
+                  className="text-xs font-bold px-2 py-0.5 border-2 border-black bg-black text-white hover:bg-gray-800 transition-colors"
                 >Sí</button>
               </div>
             </div>
           )}
           {matchedExpense && confirmedMatch && (
-            <div className="bg-green-50 border border-green-200 rounded-xl px-3 py-2 flex items-center gap-2 text-sm text-green-800">
-              <span>✅</span>
+            <div className="border-2 border-black bg-green-400 px-3 py-2 flex items-center gap-2 text-sm font-bold">
+              <span>✓</span>
               <span>Vinculado a <strong>{matchedExpense.name}</strong></span>
               <button onClick={() => { setConfirmedMatch(false); setMatchedExpense(null); }}
-                className="ml-auto text-xs text-gray-400 hover:text-gray-600">✕</button>
+                className="ml-auto text-xs font-bold px-1.5 border-2 border-black bg-white hover:bg-(--color-accent) transition-colors">✕</button>
             </div>
           )}
 
-          {/* Toggle auto-create — solo cuando no hay match confirmado */}
+          {/* Toggle auto-create */}
           {!matchedExpense && merchant.trim().length > 0 && (
-            <label className="flex items-center gap-2 text-xs text-zinc-600 cursor-pointer select-none">
+            <label className="flex items-center gap-2 text-xs font-bold cursor-pointer select-none">
               <input
                 type="checkbox"
                 checked={autoCreateExpense}
                 onChange={(e) => setAutoCreateExpense(e.target.checked)}
-                className="rounded border-zinc-300"
+                className="border-2 border-black"
               />
               <span>
                 Crear como nuevo expense en{' '}
-                <span className="font-medium">General expenses</span>
+                <span className="underline">General expenses</span>
               </span>
             </label>
           )}
 
           {/* Billing conflict dialog */}
           {billingConflict && (
-            <div className="bg-amber-50 border border-amber-300 rounded-xl p-3 space-y-2">
-              <p className="text-sm font-medium text-amber-800">¿A qué ciclo pertenece este gasto?</p>
+            <div className="border-2 border-black bg-(--color-primary) p-3 space-y-2">
+              <p className="text-sm font-bold">¿A qué ciclo pertenece este gasto?</p>
               <div className="flex gap-2">
                 {billingConflict.options.map(opt => (
                   <button
                     key={`${opt.billing_month}-${opt.billing_year}`}
                     onClick={() => setChosenBilling(opt)}
-                    className={`flex-1 py-1.5 rounded-lg text-sm border transition-colors ${
+                    className={`flex-1 py-1.5 text-sm font-bold border-2 border-black transition-colors ${
                       chosenBilling?.billing_month === opt.billing_month && chosenBilling?.billing_year === opt.billing_year
-                        ? 'bg-amber-700 text-white border-amber-700'
-                        : 'bg-white text-gray-700 border-gray-300 hover:border-amber-400'
+                        ? 'bg-black text-white'
+                        : 'bg-white hover:bg-(--color-accent)'
                     }`}
                   >
                     {monthLabel(opt.billing_month, opt.billing_year)}
@@ -323,7 +326,7 @@ export default function QuickExpenseModal({ onClose, onSaved }) {
           )}
 
           {error && (
-            <p className="text-sm text-red-600">{error}</p>
+            <p className="text-sm font-bold text-red-600 border-l-4 border-red-600 pl-2">{error}</p>
           )}
 
           {/* Botones */}
@@ -331,21 +334,21 @@ export default function QuickExpenseModal({ onClose, onSaved }) {
             <button
               onClick={() => handleSubmit(true)}
               disabled={saving}
-              className="flex-1 py-2.5 rounded-xl border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+              className="flex-1 py-2.5 border-2 border-black text-sm font-bold bg-white hover:bg-(--color-primary) shadow-[2px_2px_0_0_#000] hover:shadow-none hover:translate-x-0.5 hover:translate-y-0.5 transition-all disabled:opacity-50"
             >
               Guardar y otro
             </button>
             <button
               onClick={() => handleSubmit(false)}
               disabled={saving}
-              className="flex-1 py-2.5 rounded-xl bg-zinc-900 text-white text-sm font-medium hover:bg-zinc-800 disabled:opacity-50"
+              className="flex-1 py-2.5 border-2 border-black text-sm font-bold bg-black text-white hover:bg-gray-800 shadow-[2px_2px_0_0_#ffdb33] hover:shadow-none hover:translate-x-0.5 hover:translate-y-0.5 transition-all disabled:opacity-50"
             >
               {saving ? 'Guardando…' : 'Guardar'}
             </button>
           </div>
 
           {/* Hints de teclado */}
-          <p className="text-center text-xs text-gray-400">
+          <p className="text-center text-xs text-gray-500 font-bold">
             Enter · Guardar &nbsp;|&nbsp; ⌘Enter · Guardar y otro &nbsp;|&nbsp; Esc · Cerrar
           </p>
         </div>

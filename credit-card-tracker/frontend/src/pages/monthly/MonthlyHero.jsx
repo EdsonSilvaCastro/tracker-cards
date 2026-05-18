@@ -13,34 +13,34 @@ export default function MonthlyHero({
   const progressPct = totalBudget > 0 ? Math.min((totalSpentOnCards / totalBudget) * 100, 100) : 0;
 
   return (
-    <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
-      <p className="text-xs font-semibold text-gray-400 tracking-widest uppercase mb-3">
+    <div className="bg-(--color-primary) border-2 border-black shadow-[4px_4px_0_0_#000] p-6">
+      <p className="text-xs font-bold tracking-widest uppercase mb-3 text-black/60">
         Disponible este mes
       </p>
       <div className="flex items-start justify-between gap-4">
-        <p className={`text-4xl font-medium ${available >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+        <p className={`text-4xl font-black font-[var(--font-head)] ${available >= 0 ? 'text-black' : 'text-red-700'}`}>
           {formatCurrency(available)}
         </p>
-        <div className="text-right text-sm text-gray-500 flex-shrink-0">
-          <p>de {formatCurrency(totalBudget)}</p>
+        <div className="text-right text-sm text-black/70 flex-shrink-0">
+          <p className="font-bold">de {formatCurrency(totalBudget)}</p>
           {remainingDays > 0 && totalBudget > 0 && (
-            <p className="text-xs mt-0.5 text-gray-400">
+            <p className="text-xs mt-0.5 text-black/50">
               ~{formatCurrency(Math.max(0, dailyBudget))}/día disponible
             </p>
           )}
         </div>
       </div>
-      <div className="mt-4 h-2 bg-gray-100 rounded-full overflow-hidden">
+      <div className="mt-4 h-3 bg-black/20 border border-black overflow-hidden">
         <div
-          className={`h-full rounded-full transition-all duration-500 ${
-            progressPct >= 100 ? 'bg-red-500' : progressPct >= 90 ? 'bg-amber-400' : 'bg-green-500'
+          className={`h-full transition-all duration-500 ${
+            progressPct >= 100 ? 'bg-red-500' : progressPct >= 90 ? 'bg-orange-500' : 'bg-black'
           }`}
           style={{ width: `${progressPct}%` }}
         />
       </div>
       <div className="flex justify-between mt-1">
-        <span className="text-xs text-gray-400">Día {currentDayOfMonth} de {daysInMonth}</span>
-        <span className="text-xs text-gray-400">{remainingDays} días restantes</span>
+        <span className="text-xs font-bold text-black/60">Día {currentDayOfMonth} de {daysInMonth}</span>
+        <span className="text-xs font-bold text-black/60">{remainingDays} días restantes</span>
       </div>
     </div>
   );

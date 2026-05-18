@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { ChevronLeft, ChevronRight, Copy, Settings, AlertCircle } from 'lucide-react';
 import api from '../../lib/api';
+import { DEMO_MODE, mockCardsData, mockBudgetData, mockCards, mockSpendingAnalysis } from '../../lib/mockData';
 
 import MonthlyHero from './MonthlyHero';
 import MonthlyStats from './MonthlyStats';
@@ -125,6 +126,15 @@ export default function MonthlyOverview() {
   const fetchAllData = async () => {
     setLoading(true);
     setError(null);
+
+    if (DEMO_MODE) {
+      setCardsData(mockCardsData);
+      setBudgetData(mockBudgetData);
+      setAllCards(mockCards);
+      setSpendingAnalysis(mockSpendingAnalysis);
+      setLoading(false);
+      return;
+    }
 
     const results = await Promise.allSettled([
       api.get(`/monthly-balances/overview/${currentMonth}/${currentYear}`),
@@ -571,7 +581,7 @@ export default function MonthlyOverview() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600" />
+        <div className="animate-spin h-12 w-12 border-4 border-black border-t-transparent" />
       </div>
     );
   }
@@ -590,7 +600,7 @@ export default function MonthlyOverview() {
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           {/* Month navigation */}
-          <div className="flex items-center gap-1 border border-gray-200 rounded-lg overflow-hidden">
+          <div className="flex items-center gap-1 border-2 border-black overflow-hidden shadow-[2px_2px_0_0_#000]">
             <button
               onClick={goToPreviousMonth}
               className="p-2 hover:bg-gray-100 transition-colors"
@@ -615,7 +625,7 @@ export default function MonthlyOverview() {
               setCopyForm({ from_month: '', from_year: '', include_actual: false });
               setShowCopyModal(true);
             }}
-            className="flex items-center gap-1 px-3 py-2 text-sm border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+            className="flex items-center gap-1 px-3 py-2 text-sm border-2 border-black hover:bg-(--color-primary) transition-colors shadow-[2px_2px_0_0_#000] font-bold"
           >
             <Copy className="h-4 w-4" />
             <span className="hidden sm:inline">Copiar de mes anterior</span>
@@ -626,7 +636,7 @@ export default function MonthlyOverview() {
               setBudgetFormValue(totalBudget || '');
               setShowBudgetModal(true);
             }}
-            className="flex items-center gap-1 px-3 py-2 text-sm border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+            className="flex items-center gap-1 px-3 py-2 text-sm border-2 border-black hover:bg-(--color-primary) transition-colors shadow-[2px_2px_0_0_#000] font-bold"
           >
             <Settings className="h-4 w-4" />
             <span className="hidden sm:inline">Editar presupuesto</span>
@@ -635,15 +645,15 @@ export default function MonthlyOverview() {
       </div>
 
       {error && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700 flex items-center gap-2">
+        <div className="bg-red-50 border-2 border-red-400 p-4 text-red-700 flex items-center gap-2">
           <AlertCircle className="h-5 w-5" />
           {error}
         </div>
       )}
 
       {copyMessage && (
-        <div className={`rounded-lg p-3 flex items-start justify-between gap-2 text-sm ${
-          copyMessage.warning ? 'bg-amber-50 border border-amber-200 text-amber-800' : 'bg-green-50 border border-green-200 text-green-800'
+        <div className={`p-3 flex items-start justify-between gap-2 text-sm border-2 ${
+          copyMessage.warning ? 'bg-amber-50 border-amber-400 text-amber-800' : 'bg-green-50 border-green-400 text-green-800'
         }`}>
           <div>
             <p className="font-medium">{copyMessage.text}</p>
@@ -719,7 +729,7 @@ export default function MonthlyOverview() {
             />
           ))}
           {budgetSections.length === 0 && (
-            <div className="bg-white border border-gray-200 rounded-xl p-10 text-center text-gray-400">
+            <div className="bg-white border-2 border-black p-10 text-center text-gray-500 font-bold">
               No hay categorías de presupuesto. Configura el presupuesto del mes.
             </div>
           )}

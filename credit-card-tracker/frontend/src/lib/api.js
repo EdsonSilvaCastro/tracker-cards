@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { supabase } from './supabase';
+import { DEMO_MODE, getMockResponse } from './mockData';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
 
@@ -24,10 +25,23 @@ api.interceptors.request.use(async (config) => {
   return Promise.reject(error);
 });
 
+// Demo mode: intercept requests and return mock data
+if (DEMO_MODE) {
+  api.interceptors.request.use((config) => {
+    const mock = getMockResponse(config.url);
+    if (mock) {
+      // Cancel the real request and return mock data
+      config.adapter = () => Promise.resolve({ data: mock.data, status: 200, statusText: 'OK', headers: {}, config });
+    }
+    return config;
+  });
+}
+
 // Handle response errors
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
+    if (DEMO_MODE) return Promise.reject(error);
     if (error.response?.status === 401) {
       // Token expired or invalid
       await supabase.auth.signOut();

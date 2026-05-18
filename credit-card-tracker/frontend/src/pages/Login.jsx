@@ -28,34 +28,34 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-50 to-primary-100 py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen flex items-center justify-center bg-[#f5f0e8] py-12 px-4">
       <div className="max-w-md w-full">
         {/* Logo and Title */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary-600 text-white mb-4">
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-(--color-primary) border-2 border-black shadow-[4px_4px_0_0_#000] mb-4">
             <CreditCard className="h-8 w-8" />
           </div>
-          <h2 className="text-3xl font-bold text-gray-900">Welcome back</h2>
-          <p className="mt-2 text-gray-600">Sign in to your Credit Card Tracker</p>
+          <h1 className="font-head text-4xl font-bold">Welcome back</h1>
+          <p className="mt-2 text-(--color-muted-foreground)">Sign in to your Credit Card Tracker</p>
         </div>
 
         {/* Form Card */}
-        <div className="bg-white rounded-2xl shadow-xl p-8">
+        <div className="bg-white border-2 border-black shadow-[6px_6px_0_0_#000] p-8">
           {error && (
-            <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3">
-              <AlertCircle className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
-              <p className="text-sm text-red-700">{error}</p>
+            <div className="mb-5 p-4 bg-(--color-destructive) border-2 border-black flex items-start gap-3">
+              <AlertCircle className="h-5 w-5 text-white flex-shrink-0 mt-0.5" />
+              <p className="text-sm text-white font-medium">{error}</p>
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-5">
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="email" className="block text-sm font-bold mb-1">
                 Email address
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Mail className="h-5 w-5 text-gray-400" />
+                  <Mail className="h-4 w-4 text-(--color-muted)" />
                 </div>
                 <input
                   id="email"
@@ -63,19 +63,19 @@ export default function Login() {
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  className="block w-full pl-9 pr-3 py-2.5 border-2 border-black bg-white shadow-[3px_3px_0_0_#000] placeholder-gray-400 focus:outline-none focus:shadow-[1px_1px_0_0_#000] focus:translate-y-0.5 transition-all"
                   placeholder="you@example.com"
                 />
               </div>
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="password" className="block text-sm font-bold mb-1">
                 Password
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Lock className="h-5 w-5 text-gray-400" />
+                  <Lock className="h-4 w-4 text-(--color-muted)" />
                 </div>
                 <input
                   id="password"
@@ -83,7 +83,7 @@ export default function Login() {
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  className="block w-full pl-9 pr-3 py-2.5 border-2 border-black bg-white shadow-[3px_3px_0_0_#000] placeholder-gray-400 focus:outline-none focus:shadow-[1px_1px_0_0_#000] focus:translate-y-0.5 transition-all"
                   placeholder="••••••••"
                 />
               </div>
@@ -92,11 +92,11 @@ export default function Login() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="w-full flex justify-center py-3 px-4 border-2 border-black font-bold bg-(--color-primary) shadow-[4px_4px_0_0_#000] hover:shadow-[2px_2px_0_0_#000] hover:translate-y-0.5 active:shadow-none active:translate-y-1 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? (
-                <div className="flex items-center">
-                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                <div className="flex items-center gap-2">
+                  <div className="animate-spin h-4 w-4 border-2 border-black border-t-transparent"></div>
                   Signing in...
                 </div>
               ) : (
@@ -105,10 +105,10 @@ export default function Login() {
             </button>
           </form>
 
-          <div className="mt-6 text-center">
-            <p className="text-sm text-gray-600">
+          <div className="mt-6 text-center border-t-2 border-black pt-5">
+            <p className="text-sm">
               Don't have an account?{' '}
-              <Link to="/signup" className="font-medium text-primary-600 hover:text-primary-500">
+              <Link to="/signup" className="font-bold underline hover:text-(--color-muted-foreground)">
                 Sign up
               </Link>
             </p>

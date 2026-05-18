@@ -8,7 +8,7 @@ import {
   Calendar,
   BarChart3
 } from 'lucide-react';
-import { Card, CardContent, Button } from '../components/ui';
+import { Card, CardContent, Button, Dropdown } from '../components/ui';
 import api from '../lib/api';
 
 const months = [
@@ -106,7 +106,7 @@ export default function MonthlyComparison() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+        <div className="w-12 h-12 border-4 border-black border-t-transparent animate-spin" />
       </div>
     );
   }
@@ -146,49 +146,37 @@ export default function MonthlyComparison() {
             <CardContent className="p-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-gray-700">Compare Month</label>
+                  <label className="text-sm font-bold uppercase tracking-wide">Compare Month</label>
                   <div className="flex gap-2">
-                    <select
+                    <Dropdown
+                      className="flex-1"
                       value={month1.month}
-                      onChange={(e) => setMonth1(prev => ({ ...prev, month: parseInt(e.target.value) }))}
-                      className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-                    >
-                      {months.map((m, i) => (
-                        <option key={i} value={i}>{m}</option>
-                      ))}
-                    </select>
-                    <select
+                      onChange={(v) => setMonth1(prev => ({ ...prev, month: parseInt(v) }))}
+                      options={months.map((m, i) => ({ value: i, label: m }))}
+                    />
+                    <Dropdown
+                      className="w-24"
                       value={month1.year}
-                      onChange={(e) => setMonth1(prev => ({ ...prev, year: parseInt(e.target.value) }))}
-                      className="w-24 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-                    >
-                      {years.map(y => (
-                        <option key={y} value={y}>{y}</option>
-                      ))}
-                    </select>
+                      onChange={(v) => setMonth1(prev => ({ ...prev, year: parseInt(v) }))}
+                      options={years.map(y => ({ value: y, label: String(y) }))}
+                    />
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-gray-700">With Month</label>
+                  <label className="text-sm font-bold uppercase tracking-wide">With Month</label>
                   <div className="flex gap-2">
-                    <select
+                    <Dropdown
+                      className="flex-1"
                       value={month2.month}
-                      onChange={(e) => setMonth2(prev => ({ ...prev, month: parseInt(e.target.value) }))}
-                      className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-                    >
-                      {months.map((m, i) => (
-                        <option key={i} value={i}>{m}</option>
-                      ))}
-                    </select>
-                    <select
+                      onChange={(v) => setMonth2(prev => ({ ...prev, month: parseInt(v) }))}
+                      options={months.map((m, i) => ({ value: i, label: m }))}
+                    />
+                    <Dropdown
+                      className="w-24"
                       value={month2.year}
-                      onChange={(e) => setMonth2(prev => ({ ...prev, year: parseInt(e.target.value) }))}
-                      className="w-24 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-                    >
-                      {years.map(y => (
-                        <option key={y} value={y}>{y}</option>
-                      ))}
-                    </select>
+                      onChange={(v) => setMonth2(prev => ({ ...prev, year: parseInt(v) }))}
+                      options={years.map(y => ({ value: y, label: String(y) }))}
+                    />
                   </div>
                 </div>
               </div>
@@ -199,9 +187,9 @@ export default function MonthlyComparison() {
             <>
               {/* Summary Cards */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200">
+                <Card className="bg-blue-100 border-blue-300">
                   <CardContent className="p-4">
-                    <p className="text-sm text-blue-600 font-medium mb-1">Card Payments</p>
+                    <p className="text-sm font-bold mb-1">Card Payments</p>
                     <div className="flex items-end justify-between">
                       <div>
                         <p className="text-xs text-gray-500">{months[month2.month]}</p>
@@ -218,9 +206,9 @@ export default function MonthlyComparison() {
                   </CardContent>
                 </Card>
 
-                <Card className="bg-gradient-to-br from-green-50 to-emerald-50 border-green-200">
+                <Card className="bg-green-100 border-green-300">
                   <CardContent className="p-4">
-                    <p className="text-sm text-green-600 font-medium mb-1">Budget</p>
+                    <p className="text-sm font-bold mb-1">Budget</p>
                     <div className="flex items-end justify-between">
                       <div>
                         <p className="text-xs text-gray-500">{months[month2.month]}</p>
@@ -237,9 +225,9 @@ export default function MonthlyComparison() {
                   </CardContent>
                 </Card>
 
-                <Card className="bg-gradient-to-br from-purple-50 to-pink-50 border-purple-200">
+                <Card className="bg-purple-100 border-purple-300">
                   <CardContent className="p-4">
-                    <p className="text-sm text-purple-600 font-medium mb-1">Expenses Spent</p>
+                    <p className="text-sm font-bold mb-1">Expenses Spent</p>
                     <div className="flex items-end justify-between">
                       <div>
                         <p className="text-xs text-gray-500">{months[month2.month]}</p>
@@ -278,20 +266,20 @@ export default function MonthlyComparison() {
                             </div>
                           </div>
                           <div className="flex gap-2 items-center">
-                            <span className="text-xs text-gray-500 w-12">{months[month1.month].slice(0, 3)}</span>
-                            <div className="flex-1 h-4 bg-gray-100 rounded-full overflow-hidden">
+                            <span className="text-xs font-bold w-12">{months[month1.month].slice(0, 3)}</span>
+                            <div className="flex-1 h-4 bg-gray-100 border border-black overflow-hidden">
                               <div 
-                                className="h-full bg-blue-400 rounded-full transition-all"
+                                className="h-full bg-blue-400 transition-all"
                                 style={{ width: `${(m1.spent / maxValue) * 100}%` }}
                               />
                             </div>
-                            <span className="text-xs font-medium w-24 text-right">{formatCurrency(m1.spent)}</span>
+                            <span className="text-xs font-bold w-24 text-right">{formatCurrency(m1.spent)}</span>
                           </div>
                           <div className="flex gap-2 items-center">
-                            <span className="text-xs text-gray-500 w-12">{months[month2.month].slice(0, 3)}</span>
-                            <div className="flex-1 h-4 bg-gray-100 rounded-full overflow-hidden">
+                            <span className="text-xs font-bold w-12">{months[month2.month].slice(0, 3)}</span>
+                            <div className="flex-1 h-4 bg-gray-100 border border-black overflow-hidden">
                               <div 
-                                className="h-full bg-purple-400 rounded-full transition-all"
+                                className="h-full bg-(--color-primary) transition-all"
                                 style={{ width: `${(m2.spent / maxValue) * 100}%` }}
                               />
                             </div>
@@ -330,7 +318,7 @@ export default function MonthlyComparison() {
                               {formatCurrency(month.total_cards)}
                             </span>
                             <div 
-                              className="w-full bg-gradient-to-t from-primary-600 to-primary-400 rounded-t-lg transition-all duration-500"
+                              className="w-full bg-black transition-all duration-500"
                               style={{ height: `${height}%`, minHeight: height > 0 ? '20px' : '4px' }}
                             />
                           </div>

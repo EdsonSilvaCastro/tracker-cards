@@ -1,35 +1,71 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+@import "tw-animate-css";
 
-@layer base {
-  body {
-    @apply bg-gray-50 text-gray-900;
-  }
+@theme {
+  --font-head: "Archivo Black", sans-serif;
+  --font-sans: "Space Grotesk", sans-serif;
+
+  --radius: 0px;
+
+  --shadow-xs: 1px 1px 0 0 var(--color-border);
+  --shadow-sm: 2px 2px 0 0 var(--color-border);
+  --shadow:    3px 3px 0 0 var(--color-border);
+  --shadow-md: 4px 4px 0 0 var(--color-border);
+  --shadow-lg: 6px 6px 0 0 var(--color-border);
+  --shadow-xl: 10px 10px 0 0 var(--color-border);
+  --shadow-2xl: 16px 16px 0 1px var(--color-border);
+
+  --color-background:             #fff;
+  --color-foreground:             #000;
+  --color-card:                   #fff;
+  --color-card-foreground:        #000;
+  --color-primary:                #ffdb33;
+  --color-primary-hover:          #ffcc00;
+  --color-primary-foreground:     #000;
+  --color-secondary:              #000;
+  --color-secondary-foreground:   #fff;
+  --color-muted:                  #aeaeae;
+  --color-muted-foreground:       #5a5a5a;
+  --color-accent:                 #fae583;
+  --color-accent-foreground:      #000;
+  --color-destructive:            #e63946;
+  --color-destructive-foreground: #fff;
+  --color-border:                 #000;
+  --color-input:                  #fff;
 }
 
-@layer components {
-  .btn-primary {
-    @apply bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 transition-colors font-medium;
-  }
-  
-  .btn-secondary {
-    @apply bg-gray-200 text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-300 transition-colors font-medium;
-  }
-  
-  .btn-danger {
-    @apply bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors font-medium;
-  }
-  
-  .card {
-    @apply bg-white rounded-xl shadow-md p-6;
-  }
-  
-  .input-field {
-    @apply w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none;
-  }
-  
-  .label {
-    @apply block text-sm font-medium text-gray-700 mb-2;
-  }
+:root {
+  --radius: 0px;
+  --background: #fff;
+  --foreground: #000;
+  --card: #fff;
+  --card-foreground: #000;
+  --primary: #ffdb33;
+  --primary-hover: #ffcc00;
+  --primary-foreground: #000;
+  --secondary: #000;
+  --secondary-foreground: #fff;
+  --muted: #aeaeae;
+  --muted-foreground: #5a5a5a;
+  --accent: #fae583;
+  --accent-foreground: #000;
+  --destructive: #e63946;
+  --destructive-foreground: #fff;
+  --border: #000;
+  --input: #fff;
 }
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--background);
+  color: var(--foreground);
+}
+
+h1, h2, h3, h4 {
+  font-family: var(--font-head);
+}
+

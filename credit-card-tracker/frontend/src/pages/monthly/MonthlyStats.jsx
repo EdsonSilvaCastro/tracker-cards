@@ -23,31 +23,33 @@ export default function MonthlyStats({
   return (
     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
       {/* Gastado real */}
-      <div className="bg-white border border-gray-200 rounded-xl p-4">
-        <p className="text-xs text-gray-500 mb-1">Gastado real</p>
-        <p className="text-xl font-semibold text-gray-900">{formatCurrency(totalSpentOnCards)}</p>
-        <p className="text-xs text-gray-400 mt-1">en tarjetas</p>
+      <div className="bg-white border-2 border-black shadow-[4px_4px_0_0_#000] p-4">
+        <p className="text-xs font-bold text-black/50 uppercase tracking-wide mb-1">Gastado real</p>
+        <p className="text-xl font-black text-black">{formatCurrency(totalSpentOnCards)}</p>
+        <p className="text-xs text-black/40 mt-1">en tarjetas</p>
       </div>
 
       {/* En plan */}
-      <div className="bg-green-50 border border-green-100 rounded-xl p-4">
-        <p className="text-xs text-green-600 mb-1">En plan</p>
-        <p className="text-xl font-semibold text-green-700">{formatCurrency(totalInPlan)}</p>
-        <p className="text-xs text-green-500 mt-1">gastos asignados</p>
+      <div className="bg-green-400 border-2 border-black shadow-[4px_4px_0_0_#000] p-4">
+        <p className="text-xs font-bold text-black/60 uppercase tracking-wide mb-1">En plan</p>
+        <p className="text-xl font-black text-black">{formatCurrency(totalInPlan)}</p>
+        <p className="text-xs text-black/50 mt-1">gastos asignados</p>
       </div>
 
       {/* Fuera de plan — KPI principal */}
-      <div className="bg-red-50 border border-red-100 rounded-xl p-4">
-        <p className="text-xs text-red-600 mb-1 font-medium">⚡ Fuera de plan</p>
-        <p className="text-xl font-semibold text-red-700">{formatCurrency(totalOutOfPlan)}</p>
-        <p className="text-xs text-red-400 mt-1">sin categorizar</p>
+      <div className="bg-red-400 border-2 border-black shadow-[4px_4px_0_0_#000] p-4">
+        <p className="text-xs font-bold text-black/60 uppercase tracking-wide mb-1">⚡ Fuera de plan</p>
+        <p className="text-xl font-black text-black">{formatCurrency(totalOutOfPlan)}</p>
+        <p className="text-xs text-black/50 mt-1">sin categorizar</p>
       </div>
 
       {/* Ritmo */}
-      <div className={`border rounded-xl p-4 ${ritmoBg}`}>
-        <p className="text-xs text-gray-500 mb-1">Ritmo</p>
-        <p className={`text-xl font-semibold ${ritmoColor}`}>{ritmoLabel}</p>
-        <p className="text-xs text-gray-400 mt-1">vs ritmo ideal</p>
+      <div className={`border-2 border-black shadow-[4px_4px_0_0_#000] p-4 ${
+        desviacion > 5 ? 'bg-red-400' : desviacion > 0 ? 'bg-orange-300' : 'bg-green-400'
+      }`}>
+        <p className="text-xs font-bold text-black/60 uppercase tracking-wide mb-1">Ritmo</p>
+        <p className="text-xl font-black text-black">{ritmoLabel}</p>
+        <p className="text-xs text-black/50 mt-1">vs ritmo ideal</p>
       </div>
     </div>
   );
