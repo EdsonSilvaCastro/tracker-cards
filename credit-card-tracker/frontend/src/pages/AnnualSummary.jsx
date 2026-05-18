@@ -62,7 +62,7 @@ export default function AnnualSummary() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+        <div className="animate-spin h-12 w-12 border-4 border-black border-t-transparent"></div>
       </div>
     );
   }
@@ -82,14 +82,14 @@ export default function AnnualSummary() {
         <div className="flex items-center gap-2">
           <button 
             onClick={() => setYear(y => y - 1)}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            className="p-2 hover:bg-(--color-primary) border-2 border-black transition-colors"
           >
             <ChevronLeft className="h-5 w-5 text-gray-600" />
           </button>
           <span className="text-xl font-bold text-gray-900 min-w-[80px] text-center">{year}</span>
           <button 
             onClick={() => setYear(y => y + 1)}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            className="p-2 hover:bg-(--color-primary) border-2 border-black transition-colors"
             disabled={year >= new Date().getFullYear()}
           >
             <ChevronRight className={`h-5 w-5 ${year >= new Date().getFullYear() ? 'text-gray-300' : 'text-gray-600'}`} />
@@ -99,7 +99,7 @@ export default function AnnualSummary() {
 
       {/* Annual Totals */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        <Card className="bg-gradient-to-br from-blue-500 to-indigo-600 text-white">
+        <Card className="bg-blue-400 border-black">
           <CardContent className="p-4">
             <div className="flex items-center gap-2 mb-2">
               <CreditCard className="h-5 w-5 opacity-80" />
@@ -110,7 +110,7 @@ export default function AnnualSummary() {
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-green-500 to-emerald-600 text-white">
+        <Card className="bg-green-400 border-black">
           <CardContent className="p-4">
             <div className="flex items-center gap-2 mb-2">
               <Target className="h-5 w-5 opacity-80" />
@@ -121,7 +121,7 @@ export default function AnnualSummary() {
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-purple-500 to-pink-600 text-white">
+        <Card className="bg-purple-400 border-black">
           <CardContent className="p-4">
             <div className="flex items-center gap-2 mb-2">
               <BarChart3 className="h-5 w-5 opacity-80" />
@@ -132,7 +132,7 @@ export default function AnnualSummary() {
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-amber-500 to-orange-600 text-white">
+        <Card className="bg-(--color-primary) border-black">
           <CardContent className="p-4">
             <div className="flex items-center gap-2 mb-2">
               <Award className="h-5 w-5 opacity-80" />
@@ -163,11 +163,11 @@ export default function AnnualSummary() {
                       {formatCompact(month.total_card_payments)}
                     </span>
                     <div 
-                      className={`w-full rounded-t-lg transition-all duration-500 ${
+                      className={`w-full transition-all duration-500 border-2 border-black ${
                         month.budget_status === 'under' 
-                          ? 'bg-gradient-to-t from-green-500 to-green-400'
-                          : 'bg-gradient-to-t from-red-500 to-red-400'
-                      } ${isCurrentMonth ? 'ring-2 ring-primary-500 ring-offset-1' : ''}`}
+                          ? 'bg-green-400'
+                          : 'bg-red-400'
+                      } ${isCurrentMonth ? 'outline outline-2 outline-offset-2 outline-black' : ''}`}
                       style={{ 
                         height: `${Math.max(height, 4)}%`,
                         minHeight: month.total_card_payments > 0 ? '16px' : '4px'
@@ -185,11 +185,11 @@ export default function AnnualSummary() {
           {/* Legend */}
           <div className="flex justify-center gap-6 mt-4 pt-4 border-t text-xs text-gray-500">
             <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded bg-green-500" />
+              <div className="w-3 h-3 bg-green-400 border border-black" />
               <span>Under Budget</span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded bg-red-500" />
+              <div className="w-3 h-3 bg-red-400 border border-black" />
               <span>Over Budget</span>
             </div>
           </div>
@@ -199,14 +199,14 @@ export default function AnnualSummary() {
       {/* Best & Worst Months */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {annual.lowest_spending_month && (
-          <Card className="border-green-200 bg-green-50">
+          <Card className="border-green-400 bg-green-50">
             <CardContent className="p-4">
               <div className="flex items-center gap-3 mb-3">
-                <div className="p-2 bg-green-100 rounded-lg">
-                  <TrendingDown className="h-5 w-5 text-green-600" />
+                <div className="p-2 bg-green-400 border-2 border-black">
+                  <TrendingDown className="h-5 w-5" />
                 </div>
                 <div>
-                  <p className="text-sm text-green-600 font-medium">Lowest Spending</p>
+                  <p className="text-sm font-bold">Lowest Spending</p>
                   <p className="text-lg font-bold text-green-700">
                     {fullMonths[annual.lowest_spending_month.month - 1]}
                   </p>
@@ -237,14 +237,14 @@ export default function AnnualSummary() {
         )}
 
         {annual.highest_spending_month && (
-          <Card className="border-red-200 bg-red-50">
+          <Card className="border-red-400 bg-red-50">
             <CardContent className="p-4">
               <div className="flex items-center gap-3 mb-3">
-                <div className="p-2 bg-red-100 rounded-lg">
-                  <TrendingUp className="h-5 w-5 text-red-600" />
+                <div className="p-2 bg-red-400 border-2 border-black">
+                  <TrendingUp className="h-5 w-5" />
                 </div>
                 <div>
-                  <p className="text-sm text-red-600 font-medium">Highest Spending</p>
+                  <p className="text-sm font-bold">Highest Spending</p>
                   <p className="text-lg font-bold text-red-700">
                     {fullMonths[annual.highest_spending_month.month - 1]}
                   </p>
@@ -303,10 +303,10 @@ export default function AnnualSummary() {
                       {formatCurrency(month.total_spent)}
                     </td>
                     <td className="px-4 py-3 text-center">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                      <span className={`px-2 py-1 text-xs font-bold border border-black ${
                         month.budget_status === 'under'
-                          ? 'bg-green-100 text-green-700'
-                          : 'bg-red-100 text-red-700'
+                          ? 'bg-green-400'
+                          : 'bg-red-400'
                       }`}>
                         {month.budget_status === 'under' ? '✓ Under' : '⚠ Over'}
                       </span>
