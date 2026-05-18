@@ -65,8 +65,8 @@ export const getAnnualSummary = async (req, res) => {
         total_spent: totalSpent,
         cards_paid: cards.filter(c => c.is_paid).length,
         total_cards: cards.length,
-        budget_status: totalBudget >= totalCardPayments ? 'under' : 'over',
-        difference: totalBudget - totalCardPayments
+        budget_status: totalBudget >= totalSpent ? 'under' : 'over',
+        difference: totalBudget - totalSpent
       };
     });
 
