@@ -7,11 +7,15 @@ export async function sendMessage(chatId, text, options = {}) {
     body: JSON.stringify({
       chat_id: chatId,
       text,
-      parse_mode: 'Markdown',
+      parse_mode: 'HTML',
       ...options,
     }),
   });
-  return res.json();
+  const json = await res.json();
+  if (!json.ok) {
+    console.error(`Telegram sendMessage failed (chat_id=${chatId}):`, json);
+  }
+  return json;
 }
 
 export function isAuthorized(chatId) {

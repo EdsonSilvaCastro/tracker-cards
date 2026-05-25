@@ -15,6 +15,7 @@ const router = express.Router();
 
 // ==================== Telegram Webhook (sin auth JWT — debe ir ANTES del middleware) ====================
 router.post('/telegram/webhook', telegramController.handleWebhook);
+router.get('/telegram/status', telegramController.getBotStatus);
 
 // All routes require authentication
 router.use(authenticateUser);

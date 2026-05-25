@@ -9,6 +9,67 @@ import { supabaseAdmin } from '../config/supabase.js';
 const conversationState = new Map();
 
 // ---------------------------------------------------------------------------
+// GET /api/telegram/status  — Diagnóstico del estado del bot
+// ---------------------------------------------------------------------------
+export async function getBotStatus(req, res) {
+  const results = {};
+
+  // Verificar token de Telegram
+  try {
+    const tgRes = await fetch(
+      `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/getMe`
+    );
+    const tgJson = await tgRes.json();
+    results.telegram = tgJson.ok
+      ? { ok: true, bot_username: tgJson.result?.username }
+      : { ok: false, error: tgJson.description };
+  } catch (e) {
+    results.telegram = { ok: false, error: e.message };
+  }
+
+  // Verificar webhook registrado
+  try {
+    const whRes = await fetch(
+      `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/getWebhookInfo`
+    );
+    const whJson = await whRes.json();
+    results.webhook = whJson.ok
+      ? {
+          ok: true,
+          url: whJson.result?.url,
+          pending_update_count: whJson.result?.pending_update_count,
+          last_error_message: whJson.result?.last_error_message,
+          last_error_date: whJson.result?.last_error_date,
+        }
+      : { ok: false, error: whJson.description };
+  } catch (e) {
+    results.webhook = { ok: false, error: e.message };
+  }
+
+  // Verificar Anthropic API (prueba con una llamada mínima)
+  try {
+    await parseExpenseMessage('test diagnóstico', { activeCards: [] });
+    results.claude = { ok: true };
+  } catch (e) {
+    results.claude = { ok: false, error: e.message };
+  }
+
+  // Verificar Supabase (ping simple)
+  try {
+    const { error } = await supabaseAdmin
+      .from('credit_cards')
+      .select('id')
+      .limit(1);
+    results.supabase = error ? { ok: false, error: error.message } : { ok: true };
+  } catch (e) {
+    results.supabase = { ok: false, error: e.message };
+  }
+
+  const allOk = Object.values(results).every(r => r.ok);
+  res.status(allOk ? 200 : 207).json({ status: allOk ? 'all_ok' : 'degraded', checks: results });
+}
+
+// ---------------------------------------------------------------------------
 // POST /api/telegram/webhook  — Telegram llama aquí en cada mensaje
 // ---------------------------------------------------------------------------
 export async function handleWebhook(req, res) {
@@ -27,34 +88,39 @@ export async function handleWebhook(req, res) {
     return;
   }
 
-  // Idempotencia: verificar si ya procesamos este update_id
-  const { data: existing } = await supabaseAdmin
-    .from('processed_telegram_updates')
-    .select('update_id')
-    .eq('update_id', updateId)
-    .maybeSingle();
+  try {
+    // Idempotencia: verificar si ya procesamos este update_id
+    const { data: existing, error: selectError } = await supabaseAdmin
+      .from('processed_telegram_updates')
+      .select('update_id')
+      .eq('update_id', updateId)
+      .maybeSingle();
 
-  if (existing) {
-    console.log(`Skipping duplicate update_id ${updateId}`);
-    return;
-  }
+    if (selectError) {
+      console.error('Error leyendo processed_telegram_updates:', selectError);
+      // Continuar: no bloquear por fallo de idempotencia
+    }
 
-  // Marcar como procesado ANTES de procesar (evita race conditions)
-  const { error: insertError } = await supabaseAdmin
-    .from('processed_telegram_updates')
-    .insert({ update_id: updateId, chat_id: chatId, message_text: text });
-
-  if (insertError) {
-    // Unique constraint violation: otra invocación ya ganó la carrera
-    if (insertError.code === '23505') {
-      console.log(`Race condition: update_id ${updateId} ya procesado por otra request`);
+    if (existing) {
+      console.log(`Skipping duplicate update_id ${updateId}`);
       return;
     }
-    console.error('Error registrando update_id:', insertError);
-    // Continuar de todas formas — mejor procesar que perder el mensaje
-  }
 
-  try {
+    // Marcar como procesado ANTES de procesar (evita race conditions)
+    const { error: insertError } = await supabaseAdmin
+      .from('processed_telegram_updates')
+      .insert({ update_id: updateId, chat_id: chatId, message_text: text });
+
+    if (insertError) {
+      // Unique constraint violation: otra invocación ya ganó la carrera
+      if (insertError.code === '23505') {
+        console.log(`Race condition: update_id ${updateId} ya procesado por otra request`);
+        return;
+      }
+      console.error('Error registrando update_id:', insertError);
+      // Continuar de todas formas — mejor procesar que perder el mensaje
+    }
+
     await processMessage(chatId, text);
   } catch (err) {
     console.error('Telegram webhook error:', err);
@@ -67,7 +133,7 @@ async function processMessage(chatId, text) {
   if (text === '/start' || text === '/help') {
     await sendMessage(
       chatId,
-      'Mándame un gasto en lenguaje natural, ej:\n_"500 amex platinum en salidas finde"_\n\n/cancel para cancelar una operación en curso.'
+      'Mándame un gasto en lenguaje natural, ej:\n<i>"500 amex platinum en salidas finde"</i>\n\n/cancel para cancelar una operación en curso.'
     );
     return;
   }
@@ -119,7 +185,7 @@ async function processMessage(chatId, text) {
   }
 
   if (parsed.intent === 'unsupported') {
-    await sendMessage(chatId, 'No entendí. Mándame algo como _"500 amex platinum en rappi"_.');
+    await sendMessage(chatId, 'No entendí. Mándame algo como <i>"500 amex platinum en rappi"</i>.');
     return;
   }
 
@@ -166,11 +232,11 @@ async function processMessage(chatId, text) {
     });
     await sendMessage(
       chatId,
-      `Estás en zona ambigua del corte de *${card.card_name}*.\n` +
+      `Estás en zona ambigua del corte de <b>${card.card_name.trim()}</b>.\n` +
       `¿A qué ciclo va este gasto?\n` +
       `1️⃣ ${monthName(altMonth)} ${altYear} (ciclo anterior)\n` +
       `2️⃣ ${monthName(billingMonth)} ${billingYear} (siguiente ciclo)\n\n` +
-      `Responde con _1_ o _2_.`
+      `Responde con <i>1</i> o <i>2</i>.`
     );
     return;
   }
@@ -189,7 +255,7 @@ async function handleBillingConfirmation(chatId, text, state) {
     chosenMonth = billingMonth;
     chosenYear = billingYear;
   } else {
-    await sendMessage(chatId, 'Responde con _1_ o _2_, por favor.');
+    await sendMessage(chatId, 'Responde con <i>1</i> o <i>2</i>, por favor.');
     return;
   }
 
@@ -278,12 +344,12 @@ async function saveTransactionAndConfirm(chatId, parsed, card, transactionDate, 
   conversationState.delete(chatId);
 
   // Mensaje de confirmación
-  let msg = `✅ *$${parsed.amount}* en ${card.card_name}\n`;
-  msg += `_${transaction.merchant}_\n`;
+  let msg = `✅ <b>$${parsed.amount}</b> en ${card.card_name.trim()}\n`;
+  msg += `<i>${transaction.merchant}</i>\n`;
   if (wasAutoCreated) {
-    msg += `🆕 Creé *${linkedExpense.expense_name}* en General expenses\n`;
+    msg += `🆕 Creé <b>${linkedExpense.expense_name}</b> en General expenses\n`;
   } else if (linkedExpense) {
-    msg += `🎯 Vinculado a *${linkedExpense.expense_name}* (${linkedExpense.section})\n`;
+    msg += `🎯 Vinculado a <b>${linkedExpense.expense_name}</b> (${linkedExpense.section})\n`;
   }
   msg += `📅 Ciclo: ${monthName(billingMonth)} ${billingYear}`;
 
