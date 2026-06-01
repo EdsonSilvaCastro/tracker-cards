@@ -76,18 +76,18 @@ export default function CategoryAccordion({
       : config.barColor;
 
   return (
-    <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
+    <div className="bg-white border-2 border-black shadow-[4px_4px_0_0_#000] overflow-hidden">
       {/* Accordion header */}
       <button
         onClick={onToggle}
-        className="w-full flex items-center gap-3 px-4 py-4 hover:bg-gray-50 transition-colors text-left"
+        className="w-full flex items-center gap-3 px-4 py-4 hover:bg-(--color-primary) transition-colors text-left"
       >
         {/* Color bar */}
-        <div className={`w-1 h-8 rounded-full flex-shrink-0 ${config.barColor}`} />
+        <div className={`w-1.5 h-8 flex-shrink-0 border border-black ${config.barColor}`} />
 
         {/* Caret */}
         <ChevronRight
-          className={`h-4 w-4 text-gray-400 flex-shrink-0 transition-transform duration-200 ${
+          className={`h-4 w-4 text-black flex-shrink-0 transition-transform duration-200 ${
             isExpanded ? 'rotate-90' : ''
           }`}
         />
@@ -95,32 +95,32 @@ export default function CategoryAccordion({
         {/* Name + at-risk badge */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className={`font-medium text-sm ${config.textColor}`}>{config.name}</span>
+            <span className="font-bold text-sm text-black uppercase tracking-wide">{config.name}</span>
             {isAtRisk && (
-              <span className="px-1.5 py-0.5 text-xs bg-red-100 text-red-600 rounded-full font-medium">
+              <span className="px-1.5 py-0.5 text-xs bg-red-400 text-black border border-black font-bold">
                 En riesgo
               </span>
             )}
           </div>
-          <p className="text-xs text-gray-400">
+          <p className="text-xs text-black/50">
             {paidCount} de {section.expenses.length} pagados
           </p>
         </div>
 
         {/* Amounts */}
         <div className="text-right flex-shrink-0">
-          <p className="text-sm font-semibold text-gray-900">
+          <p className="text-sm font-bold text-black">
             {formatCurrency(section.total_spent)}
           </p>
-          <p className="text-xs text-gray-400">/ {formatCurrency(section.total_budgeted)}</p>
+          <p className="text-xs text-black/50">/ {formatCurrency(section.total_budgeted)}</p>
         </div>
       </button>
 
       {/* Progress bar */}
       <div className="px-4 pb-3">
-        <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+        <div className="h-2 bg-black/10 border border-black/20 overflow-hidden">
           <div
-            className={`h-full rounded-full transition-all ${progressBarColor}`}
+            className={`h-full transition-all ${progressBarColor}`}
             style={{ width: `${Math.min(percentSpent, 100)}%` }}
           />
         </div>
@@ -129,9 +129,9 @@ export default function CategoryAccordion({
       {/* Expanded content */}
       {isExpanded && (
         <>
-          <div className="border-t border-gray-100 divide-y divide-gray-50">
+          <div className="border-t-2 border-black divide-y divide-black/10">
             {section.expenses.length === 0 ? (
-              <div className="px-4 py-6 text-center text-gray-400 text-sm">
+              <div className="px-4 py-6 text-center text-black/40 text-sm font-bold">
                 Sin gastos aún
               </div>
             ) : (
@@ -178,18 +178,18 @@ export default function CategoryAccordion({
           )}
 
           {/* Footer actions */}
-          <div className="px-4 py-3 border-t border-gray-100 flex items-center gap-3 bg-gray-50">
+          <div className="px-4 py-3 border-t-2 border-black flex items-center gap-3 bg-(--color-primary)">
             <button
               onClick={() => onAddExpense(section.key)}
-              className="text-sm text-blue-600 hover:text-blue-700 flex items-center gap-1"
+              className="text-sm font-bold text-black hover:underline flex items-center gap-1"
             >
               <Plus className="h-3.5 w-3.5" />
               Agregar item
             </button>
-            <span className="text-gray-300">·</span>
+            <span className="text-black/30">·</span>
             <button
               onClick={() => onCopySection(section.key)}
-              className="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1"
+              className="text-sm font-bold text-black/60 hover:text-black flex items-center gap-1"
             >
               <Copy className="h-3.5 w-3.5" />
               Copiar de mes anterior
