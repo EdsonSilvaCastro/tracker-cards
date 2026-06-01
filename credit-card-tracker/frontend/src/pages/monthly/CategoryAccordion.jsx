@@ -101,11 +101,6 @@ export default function CategoryAccordion({
                 En riesgo
               </span>
             )}
-            {suggestedPlans.length > 0 && (
-              <span className="px-1.5 py-0.5 text-xs bg-amber-100 text-amber-700 rounded-full font-medium">
-                {suggestedPlans.length} plan{suggestedPlans.length > 1 ? 'es' : ''} sin importar
-              </span>
-            )}
           </div>
           <p className="text-xs text-gray-400">
             {paidCount} de {section.expenses.length} pagados
@@ -166,15 +161,15 @@ export default function CategoryAccordion({
 
           {/* Installment plan suggestions */}
           {suggestedPlans.length > 0 && (
-            <div className="mx-4 mb-3 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 flex items-center justify-between gap-3">
-              <div className="text-sm text-amber-800">
-                <span className="font-semibold">{suggestedPlans.length} plan{suggestedPlans.length > 1 ? 'es' : ''} activo{suggestedPlans.length > 1 ? 's' : ''} este mes:</span>{' '}
+            <div className="mx-4 mb-3 border-2 border-black bg-[#ffdb33] shadow-[3px_3px_0_0_#000] px-4 py-3 flex items-center justify-between gap-3">
+              <div className="text-sm font-medium text-black">
+                <span className="font-bold">{suggestedPlans.length} plan{suggestedPlans.length > 1 ? 'es' : ''} activo{suggestedPlans.length > 1 ? 's' : ''} este mes:</span>{' '}
                 {suggestedPlans.map(p => p.name).join(', ')}
               </div>
               <button
                 onClick={handleImport}
                 disabled={importing}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium bg-amber-400 hover:bg-amber-500 disabled:opacity-60 rounded-lg border border-amber-500 text-amber-900 transition-colors whitespace-nowrap"
+                className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-bold border-2 border-black bg-white shadow-[2px_2px_0_0_#000] hover:shadow-none hover:translate-x-0.5 hover:translate-y-0.5 disabled:opacity-60 transition-all whitespace-nowrap"
               >
                 <Download className="h-3.5 w-3.5" />
                 {importing ? 'Importando…' : 'Importar'}
