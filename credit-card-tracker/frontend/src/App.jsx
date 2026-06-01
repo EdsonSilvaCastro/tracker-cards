@@ -14,6 +14,7 @@ import PaymentDueDates from './pages/PaymentDueDates';
 import MonthlyComparison from './pages/MonthlyComparison';
 import SavingsGoals from './pages/SavingsGoals';
 import AnnualSummary from './pages/AnnualSummary';
+import MonthlyPayments from './pages/MonthlyPayments';
 import Layout from './components/Layout';
 
 // Protected Route component
@@ -84,6 +85,7 @@ function App() {
             <Route path="compare" element={<MonthlyComparison />} />
             <Route path="savings" element={<SavingsGoals />} />
             <Route path="annual" element={<AnnualSummary />} />
+            <Route path="monthly-payments" element={<MonthlyPayments />} />
             <Route path="dashboard" element={<Dashboard />} />
             <Route path="cards" element={<Cards />} />
             <Route path="statements" element={<Statements />} />

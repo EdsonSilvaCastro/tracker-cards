@@ -4,6 +4,9 @@ import { useAuth } from '../contexts/AuthContext';
 import {
   LayoutDashboard,
   CreditCard,
+  FileText,
+  DollarSign,
+  Receipt,
   LogOut,
   Menu,
   X,
@@ -13,18 +16,24 @@ import {
   BarChart3,
   PiggyBank,
   TrendingUp,
+  CalendarClock,
   Plus
 } from 'lucide-react';
 import QuickExpenseModal from './QuickExpenseModal';
 
 const navigation = [
   { name: 'Monthly', href: '/monthly', icon: CalendarDays },
+  { name: 'Monthly Payments', href: '/monthly-payments', icon: CalendarClock },
   { name: 'Due Dates', href: '/due-dates', icon: Calendar },
   { name: 'Compare', href: '/compare', icon: BarChart3 },
   { name: 'Savings', href: '/savings', icon: PiggyBank },
   { name: 'Annual', href: '/annual', icon: TrendingUp },
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Cards', href: '/cards', icon: CreditCard },
+  // Hidden sections - uncomment when ready to use
+  // { name: 'Statements', href: '/statements', icon: FileText },
+  // { name: 'Payments', href: '/payments', icon: DollarSign },
+  // { name: 'Transactions', href: '/transactions', icon: Receipt },
 ];
 
 export default function Layout() {
@@ -42,6 +51,7 @@ export default function Layout() {
     savedTimerRef.current = setTimeout(() => setSavedMsg(null), 3500);
   };
 
+  // Limpiar timer al desmontar
   useEffect(() => () => clearTimeout(savedTimerRef.current), []);
 
   const handleSignOut = async () => {
@@ -49,80 +59,96 @@ export default function Layout() {
     navigate('/login');
   };
 
-  const NavItem = ({ item, onClick }) => {
-    const isActive = location.pathname === item.href;
-    return (
-      <Link
-        key={item.name}
-        to={item.href}
-        onClick={onClick}
-        className={`flex items-center gap-3 px-4 py-2.5 text-sm font-medium border-2 transition-all
-          ${isActive
-            ? 'bg-(--color-primary) border-black shadow-[3px_3px_0_0_#000] translate-y-0'
-            : 'bg-white border-transparent hover:border-black hover:shadow-[2px_2px_0_0_#000] hover:-translate-y-0.5'
-          }`}
-      >
-        <item.icon className="h-4 w-4 shrink-0" />
-        {item.name}
-      </Link>
-    );
-  };
-
   return (
-    <div className="min-h-screen bg-[#f5f0e8]">
+    <div className="min-h-screen bg-gray-100">
       {/* Mobile sidebar overlay */}
       {sidebarOpen && (
         <div
-          className="fixed inset-0 z-40 bg-black/50 lg:hidden"
+          className="fixed inset-0 z-40 bg-gray-600 bg-opacity-75 lg:hidden"
           onClick={() => setSidebarOpen(false)}
         />
       )}
 
       {/* Mobile sidebar */}
       <div
-        className={`fixed inset-y-0 left-0 z-50 w-64 bg-white border-r-2 border-black transform transition-transform duration-300 ease-in-out lg:hidden ${
+        className={`fixed inset-y-0 left-0 z-50 w-64 bg-white transform transition-transform duration-300 ease-in-out lg:hidden ${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
-        <div className="flex items-center justify-between h-16 px-4 border-b-2 border-black">
-          <span className="font-head text-lg font-bold">💳 CC Tracker</span>
+        <div className="flex items-center justify-between h-16 px-4 border-b">
+          <span className="text-xl font-bold text-primary-600">💳 CC Tracker</span>
           <button
             onClick={() => setSidebarOpen(false)}
-            className="p-1.5 border-2 border-black hover:bg-(--color-primary) transition-colors"
+            className="p-2 rounded-md text-gray-500 hover:bg-gray-100"
           >
-            <X className="h-5 w-5" />
+            <X className="h-6 w-6" />
           </button>
         </div>
-        <nav className="mt-4 px-3 flex flex-col gap-1">
-          {navigation.map((item) => (
-            <NavItem key={item.name} item={item} onClick={() => setSidebarOpen(false)} />
-          ))}
+        <nav className="mt-4 px-2 space-y-1">
+          {navigation.map((item) => {
+            const isActive = location.pathname === item.href;
+            return (
+              <Link
+                key={item.name}
+                to={item.href}
+                onClick={() => setSidebarOpen(false)}
+                className={`flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors ${
+                  isActive
+                    ? 'bg-primary-50 text-primary-700'
+                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                }`}
+              >
+                <item.icon className={`mr-3 h-5 w-5 ${isActive ? 'text-primary-600' : 'text-gray-400'}`} />
+                {item.name}
+              </Link>
+            );
+          })}
         </nav>
       </div>
 
       {/* Desktop sidebar */}
       <div className="hidden lg:fixed lg:inset-y-0 lg:flex lg:w-64 lg:flex-col">
-        <div className="flex flex-col flex-grow bg-white border-r-2 border-black">
-          <div className="flex items-center h-16 px-5 border-b-2 border-black bg-(--color-primary)">
-            <span className="font-head text-lg font-bold">💳 CC Tracker</span>
+        <div className="flex flex-col flex-grow bg-white border-r border-gray-200">
+          <div className="flex items-center h-16 px-4 border-b">
+            <span className="text-xl font-bold text-primary-600">💳 CC Tracker</span>
           </div>
-          <nav className="flex-1 mt-4 px-3 flex flex-col gap-1">
-            {navigation.map((item) => (
-              <NavItem key={item.name} item={item} />
-            ))}
+          <nav className="flex-1 mt-4 px-2 space-y-1">
+            {navigation.map((item) => {
+              const isActive = location.pathname === item.href;
+              return (
+                <Link
+                  key={item.name}
+                  to={item.href}
+                  className={`flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors ${
+                    isActive
+                      ? 'bg-primary-50 text-primary-700'
+                      : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                  }`}
+                >
+                  <item.icon className={`mr-3 h-5 w-5 ${isActive ? 'text-primary-600' : 'text-gray-400'}`} />
+                  {item.name}
+                </Link>
+              );
+            })}
           </nav>
-          <div className="p-4 border-t-2 border-black">
-            <div className="flex items-center gap-3">
-              <div className="h-9 w-9 border-2 border-black bg-(--color-accent) flex items-center justify-center shrink-0">
-                <User className="h-5 w-5" />
+          <div className="p-4 border-t">
+            <div className="flex items-center">
+              <div className="flex-shrink-0">
+                <div className="h-10 w-10 rounded-full bg-primary-100 flex items-center justify-center">
+                  <User className="h-6 w-6 text-primary-600" />
+                </div>
               </div>
-              <p className="text-xs font-medium truncate flex-1">{user?.email}</p>
+              <div className="ml-3 flex-1 min-w-0">
+                <p className="text-sm font-medium text-gray-900 truncate">
+                  {user?.email}
+                </p>
+              </div>
               <button
                 onClick={handleSignOut}
-                className="p-1.5 border-2 border-black hover:bg-(--color-destructive) hover:text-white transition-colors"
+                className="ml-2 p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100"
                 title="Sign out"
               >
-                <LogOut className="h-4 w-4" />
+                <LogOut className="h-5 w-5" />
               </button>
             </div>
           </div>
@@ -131,17 +157,18 @@ export default function Layout() {
 
       {/* Main content */}
       <div className="lg:pl-64">
-        {/* Mobile top bar */}
-        <div className="sticky top-0 z-30 flex items-center h-14 bg-(--color-primary) border-b-2 border-black px-4 lg:hidden">
+        {/* Top bar */}
+        <div className="sticky top-0 z-30 flex items-center h-16 bg-white border-b border-gray-200 px-4 lg:hidden">
           <button
             onClick={() => setSidebarOpen(true)}
-            className="p-1.5 border-2 border-black bg-white hover:bg-(--color-accent) transition-colors"
+            className="p-2 rounded-md text-gray-500 hover:bg-gray-100"
           >
-            <Menu className="h-5 w-5" />
+            <Menu className="h-6 w-6" />
           </button>
-          <span className="ml-4 font-head text-base font-bold">💳 CC Tracker</span>
+          <span className="ml-4 text-lg font-bold text-primary-600">💳 CC Tracker</span>
         </div>
 
+        {/* Page content */}
         <main className="p-4 lg:p-8">
           <Outlet />
         </main>
@@ -150,7 +177,7 @@ export default function Layout() {
       {/* FAB — Quick Expense */}
       <button
         onClick={() => setQuickExpenseOpen(true)}
-        className="fixed bottom-6 right-6 w-14 h-14 bg-black text-(--color-primary) border-2 border-black shadow-[4px_4px_0_0_#ffdb33] hover:shadow-[2px_2px_0_0_#ffdb33] hover:translate-y-1 hover:translate-x-0.5 transition-all flex items-center justify-center z-40"
+        className="fixed bottom-6 right-6 w-14 h-14 rounded-full bg-zinc-900 text-white shadow-lg hover:bg-zinc-800 flex items-center justify-center z-40"
         aria-label="Registrar gasto rápido"
       >
         <Plus className="w-6 h-6" />
@@ -165,12 +192,10 @@ export default function Layout() {
 
       {/* Toast de confirmación */}
       {savedMsg && (
-        <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-50 bg-black text-(--color-primary) font-medium text-sm px-5 py-3 border-2 border-black shadow-[4px_4px_0_0_#000] max-w-sm text-center">
+        <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-50 bg-zinc-900 text-white text-sm px-4 py-2.5 rounded-xl shadow-lg max-w-sm text-center">
           {savedMsg}
         </div>
       )}
     </div>
   );
 }
-
-

@@ -10,6 +10,7 @@ import * as savingsController from '../controllers/savingsController.js';
 import * as analyticsController from '../controllers/analyticsController.js';
 import * as cardTransactionsController from '../controllers/cardTransactionsController.js';
 import * as telegramController from '../controllers/telegramController.js';
+import * as installmentController from '../controllers/installmentController.js';
 
 const router = express.Router();
 
@@ -83,6 +84,11 @@ router.delete('/savings/:id', savingsController.deleteSavingsGoal);
 router.get('/analytics/annual/:year', analyticsController.getAnnualSummary);
 router.get('/analytics/compare', analyticsController.compareMonths);
 router.get('/analytics/trends', analyticsController.getSpendingTrends);
+
+// ==================== Installment Plans Routes ====================
+router.get('/installment-plans', installmentController.getInstallmentPlans);
+router.post('/installment-plans', installmentController.createInstallmentPlan);
+router.delete('/installment-plans/:id', installmentController.cancelInstallmentPlan);
 
 // ==================== Card Transactions Routes ====================
 // Nota: autocomplete ANTES de /:id para que Express no lo capture como param
