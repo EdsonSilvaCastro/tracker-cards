@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { ChevronLeft, ChevronRight, Copy, Settings, AlertCircle } from 'lucide-react';
 import api from '../../lib/api';
-import { DEMO_MODE, mockCardsData, mockBudgetData, mockCards, mockSpendingAnalysis } from '../../lib/mockData';
 
 import MonthlyHero from './MonthlyHero';
 import MonthlyStats from './MonthlyStats';
@@ -35,6 +34,7 @@ export default function MonthlyOverview() {
   const [budgetData, setBudgetData] = useState(null);
   const [spendingAnalysis, setSpendingAnalysis] = useState(null);
   const [allCards, setAllCards] = useState([]); // all user's credit cards for paid_with selector
+  const [installmentPlans, setInstallmentPlans] = useState([]);
 
   // UI state
   const [loading, setLoading] = useState(true);
@@ -127,26 +127,19 @@ export default function MonthlyOverview() {
     setLoading(true);
     setError(null);
 
-    if (DEMO_MODE) {
-      setCardsData(mockCardsData);
-      setBudgetData(mockBudgetData);
-      setAllCards(mockCards);
-      setSpendingAnalysis(mockSpendingAnalysis);
-      setLoading(false);
-      return;
-    }
-
     const results = await Promise.allSettled([
       api.get(`/monthly-balances/overview/${currentMonth}/${currentYear}`),
       api.get(`/budget/${currentMonth}/${currentYear}`),
       api.get('/cards'),
       api.get(`/budget/${currentMonth}/${currentYear}/spending-analysis`),
+      api.get('/installment-plans'),
     ]);
 
     if (results[0].status === 'fulfilled') setCardsData(results[0].value.data.data);
     if (results[1].status === 'fulfilled') setBudgetData(results[1].value.data.data);
     if (results[2].status === 'fulfilled') setAllCards(results[2].value.data.data || []);
     if (results[3].status === 'fulfilled') setSpendingAnalysis(results[3].value.data.data);
+    if (results[4].status === 'fulfilled') setInstallmentPlans(results[4].value.data.data || []);
 
     if (results[0].status === 'rejected' || results[1].status === 'rejected') {
       setError('Failed to load data');
@@ -462,7 +455,7 @@ export default function MonthlyOverview() {
     }
   };
 
-  // ============ COPY BUDGET ============
+  // ============ COPY SECTION ============
   const handleCopyBudget = async () => {
     if (!copyForm.from_month || !copyForm.from_year) {
       alert('Por favor selecciona mes y año de origen');
@@ -577,11 +570,51 @@ export default function MonthlyOverview() {
     }
   };
 
+  // ============ INSTALLMENT PLAN IMPORT ============
+  // Plans active this month that aren't already in monthly_payments (matched by name)
+  const suggestedPlans = (() => {
+    const monthlySection = budgetData?.sections?.find(s => s.key === 'monthly_payments');
+    const existingNames = new Set(
+      (monthlySection?.expenses || []).map(e => e.expense_name.toLowerCase().trim())
+    );
+    return installmentPlans.filter(plan => {
+      if (plan.status !== 'active') return false;
+      const hasTxThisMonth = plan.transactions?.some(
+        t => t.billing_year === currentYear && t.billing_month === currentMonth && t.installment_status !== 'cancelled'
+      );
+      if (!hasTxThisMonth) return false;
+      return !existingNames.has(plan.name.toLowerCase().trim());
+    });
+  })();
+
+  const handleImportInstallments = async (plansToImport) => {
+    setSaving(true);
+    try {
+      for (const plan of plansToImport) {
+        await api.post('/budget/expense', {
+          month: currentMonth,
+          year: currentYear,
+          section: 'monthly_payments',
+          expense_name: plan.name,
+          budgeted_amount: plan.monthly_amount,
+          actual_spent: 0,
+          status: 'pending',
+          paid_with: plan.card_id,
+        });
+      }
+      await fetchAllData();
+    } catch (err) {
+      console.error('Error importing installment plans:', err);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   // ============ RENDER ============
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin h-12 w-12 border-4 border-black border-t-transparent" />
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600" />
       </div>
     );
   }
@@ -600,7 +633,7 @@ export default function MonthlyOverview() {
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           {/* Month navigation */}
-          <div className="flex items-center gap-1 border-2 border-black overflow-hidden shadow-[2px_2px_0_0_#000]">
+          <div className="flex items-center gap-1 border border-gray-200 rounded-lg overflow-hidden">
             <button
               onClick={goToPreviousMonth}
               className="p-2 hover:bg-gray-100 transition-colors"
@@ -625,7 +658,7 @@ export default function MonthlyOverview() {
               setCopyForm({ from_month: '', from_year: '', include_actual: false });
               setShowCopyModal(true);
             }}
-            className="flex items-center gap-1 px-3 py-2 text-sm border-2 border-black hover:bg-(--color-primary) transition-colors shadow-[2px_2px_0_0_#000] font-bold"
+            className="flex items-center gap-1 px-3 py-2 text-sm border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
           >
             <Copy className="h-4 w-4" />
             <span className="hidden sm:inline">Copiar de mes anterior</span>
@@ -636,7 +669,7 @@ export default function MonthlyOverview() {
               setBudgetFormValue(totalBudget || '');
               setShowBudgetModal(true);
             }}
-            className="flex items-center gap-1 px-3 py-2 text-sm border-2 border-black hover:bg-(--color-primary) transition-colors shadow-[2px_2px_0_0_#000] font-bold"
+            className="flex items-center gap-1 px-3 py-2 text-sm border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
           >
             <Settings className="h-4 w-4" />
             <span className="hidden sm:inline">Editar presupuesto</span>
@@ -645,15 +678,15 @@ export default function MonthlyOverview() {
       </div>
 
       {error && (
-        <div className="bg-red-50 border-2 border-red-400 p-4 text-red-700 flex items-center gap-2">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700 flex items-center gap-2">
           <AlertCircle className="h-5 w-5" />
           {error}
         </div>
       )}
 
       {copyMessage && (
-        <div className={`p-3 flex items-start justify-between gap-2 text-sm border-2 ${
-          copyMessage.warning ? 'bg-amber-50 border-amber-400 text-amber-800' : 'bg-green-50 border-green-400 text-green-800'
+        <div className={`rounded-lg p-3 flex items-start justify-between gap-2 text-sm ${
+          copyMessage.warning ? 'bg-amber-50 border border-amber-200 text-amber-800' : 'bg-green-50 border border-green-200 text-green-800'
         }`}>
           <div>
             <p className="font-medium">{copyMessage.text}</p>
@@ -725,11 +758,13 @@ export default function MonthlyOverview() {
                 setCopySectionForm({ from_month: '', from_year: '', include_actual: false });
                 setShowCopySectionModal(true);
               }}
+              suggestedPlans={section.key === 'monthly_payments' ? suggestedPlans : []}
+              onImportInstallments={handleImportInstallments}
               formatCurrency={formatCurrency}
             />
           ))}
           {budgetSections.length === 0 && (
-            <div className="bg-white border-2 border-black p-10 text-center text-gray-500 font-bold">
+            <div className="bg-white border border-gray-200 rounded-xl p-10 text-center text-gray-400">
               No hay categorías de presupuesto. Configura el presupuesto del mes.
             </div>
           )}
