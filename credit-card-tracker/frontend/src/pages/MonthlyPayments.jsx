@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
-import { CalendarClock, X } from 'lucide-react';
+import { CalendarClock } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card';
+import { Button } from '../components/ui/Button';
 import api from '../lib/api';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -96,24 +98,21 @@ function getMonthTotals(plans, months, nowYear, nowMonth) {
   });
 }
 
-// ── Design tokens ─────────────────────────────────────────────────────────────
-const C = {
-  page: '#161616',
-  card: '#1e1e1e',
-  border: '0.5px solid #2e2e2e',
-  accent: '#d4b72e',
-  green: '#4CAF50',
-  red: '#e53935',
-  muted: '#888',
-  text: '#e0e0e0',
-};
+// ── Cell class helpers ────────────────────────────────────────────────────────
+function cellClasses(state) {
+  if (state === 'paid')      return 'bg-green-400 border border-black';
+  if (state === 'pending')   return 'bg-(--color-primary) border border-black';
+  if (state === 'current')   return 'bg-black text-white border border-black';
+  if (state === 'cancelled') return 'bg-gray-100 border border-black';
+  return '';
+}
 
-const cellStyle = {
-  paid:      { background: '#1a3a1a', color: '#4CAF50', border: '0.5px solid #4CAF50', borderRadius: 3 },
-  pending:   { background: '#2a2200', color: '#d4b72e', border: '0.5px solid #d4b72e', borderRadius: 3 },
-  current:   { background: '#e53935', color: '#fff',    border: '0.5px solid #e53935', borderRadius: 3 },
-  cancelled: { background: '#1a1a1a', color: '#444',    border: '0.5px solid #333',    borderRadius: 3 },
-};
+function totalCellClasses(total, isCur) {
+  if (isCur)         return 'bg-black text-white border border-black font-bold';
+  if (total > 8000)  return 'bg-red-400 border border-black font-bold';
+  if (total > 5000)  return 'bg-orange-300 border border-black font-bold';
+  return 'bg-green-400 border border-black font-bold';
+}
 
 // ── Main component ────────────────────────────────────────────────────────────
 export default function MonthlyPayments() {
@@ -235,37 +234,39 @@ export default function MonthlyPayments() {
   // ── Render ──────────────────────────────────────────────────────────────────
   if (loading) {
     return (
-      <div style={{ background: C.page, minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ color: C.muted, fontSize: 14 }}>Cargando...</div>
+      <div className="flex items-center justify-center h-64">
+        <div className="w-12 h-12 border-4 border-black border-t-transparent animate-spin" />
       </div>
     );
   }
 
   return (
-    <div style={{ background: C.page, minHeight: '100vh', padding: '24px', fontFamily: 'DM Sans, sans-serif', color: C.text }}>
-      <div style={{ maxWidth: 900, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 24 }}>
+    <div className="space-y-6">
 
-        {/* ── Page title ── */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <CalendarClock size={20} color={C.accent} />
-          <h1 style={{ fontSize: 20, fontWeight: 700, margin: 0 }}>Monthly Payments</h1>
+      {/* ── Page title ── */}
+      <div className="border-b-2 border-black pb-4">
+        <div className="flex items-center gap-2">
+          <CalendarClock className="h-6 w-6" />
+          <h1 className="font-head text-2xl font-black">Monthly Payments</h1>
         </div>
+        <p className="text-sm text-gray-600 font-bold mt-1">Gestiona tus planes de pago en cuotas</p>
+      </div>
 
-        {/* ════════════════════════════════════════════
-            SECTION A — Form
-        ════════════════════════════════════════════ */}
-        <div style={{ background: C.card, border: C.border, borderRadius: 10, padding: '20px 24px' }}>
-          <h2 style={{ fontSize: 14, fontWeight: 700, margin: '0 0 16px', color: C.accent, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
-            Nuevo plan de pago
-          </h2>
-
-          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+      {/* ════════════════════════════════════════════
+          SECTION A — Form
+      ════════════════════════════════════════════ */}
+      <Card>
+        <CardHeader className="bg-(--color-primary)">
+          <CardTitle>Nuevo plan de pago</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-4 pt-1">
 
             {/* Nombre */}
             <div>
-              <label style={labelStyle}>Nombre del gasto</label>
+              <label className="block text-sm font-medium mb-1">Nombre del gasto</label>
               <input
-                style={inputStyle}
+                className="w-full px-3 py-2 border-2 border-black bg-white shadow-[3px_3px_0_0_#000] placeholder-gray-400 focus:outline-none focus:shadow-[1px_1px_0_0_#000] focus:translate-y-0.5 transition-all"
                 type="text"
                 placeholder="Ej. Netflix anual, iPhone 16..."
                 value={form.name}
@@ -275,8 +276,8 @@ export default function MonthlyPayments() {
 
             {/* Tarjeta — segmented */}
             <div>
-              <label style={labelStyle}>Tarjeta</label>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+              <label className="block text-sm font-medium mb-2">Tarjeta</label>
+              <div className="flex flex-wrap gap-2">
                 {cards.filter(c => c.status !== 'inactive').map(c => {
                   const active = form.card_id === c.id;
                   return (
@@ -284,7 +285,11 @@ export default function MonthlyPayments() {
                       key={c.id}
                       type="button"
                       onClick={() => setField('card_id', c.id)}
-                      style={active ? segActiveStyle : segInactiveStyle}
+                      className={`px-3 py-1.5 text-sm font-medium border-2 border-black transition-all cursor-pointer ${
+                        active
+                          ? 'bg-(--color-primary) font-bold shadow-[2px_2px_0_0_#000]'
+                          : 'bg-white hover:bg-(--color-accent)'
+                      }`}
                     >
                       {c.card_name || c.bank}
                     </button>
@@ -294,13 +299,13 @@ export default function MonthlyPayments() {
             </div>
 
             {/* Monto + Plazo */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <div className="grid grid-cols-2 gap-4">
               <div>
-                <label style={labelStyle}>Monto mensual</label>
-                <div style={{ position: 'relative' }}>
-                  <span style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: C.muted, fontSize: 14 }}>$</span>
+                <label className="block text-sm font-medium mb-1">Monto mensual</label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm font-bold">$</span>
                   <input
-                    style={{ ...inputStyle, paddingLeft: 22 }}
+                    className="w-full pl-7 pr-3 py-2 border-2 border-black bg-white shadow-[3px_3px_0_0_#000] focus:outline-none focus:shadow-[1px_1px_0_0_#000] focus:translate-y-0.5 transition-all"
                     type="number"
                     min="0.01"
                     step="0.01"
@@ -311,9 +316,9 @@ export default function MonthlyPayments() {
                 </div>
               </div>
               <div>
-                <label style={labelStyle}>Plazo en meses</label>
+                <label className="block text-sm font-medium mb-1">Plazo en meses</label>
                 <input
-                  style={inputStyle}
+                  className="w-full px-3 py-2 border-2 border-black bg-white shadow-[3px_3px_0_0_#000] focus:outline-none focus:shadow-[1px_1px_0_0_#000] focus:translate-y-0.5 transition-all"
                   type="number"
                   min="1"
                   max="60"
@@ -326,14 +331,22 @@ export default function MonthlyPayments() {
 
             {/* Mes de inicio */}
             <div>
-              <label style={labelStyle}>Mes de inicio</label>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                <select style={inputStyle} value={form.start_month} onChange={e => setField('start_month', e.target.value)}>
+              <label className="block text-sm font-medium mb-1">Mes de inicio</label>
+              <div className="grid grid-cols-2 gap-4">
+                <select
+                  className="w-full px-3 py-2 border-2 border-black bg-white shadow-[3px_3px_0_0_#000] focus:outline-none focus:shadow-[1px_1px_0_0_#000] transition-all"
+                  value={form.start_month}
+                  onChange={e => setField('start_month', e.target.value)}
+                >
                   {MONTHS_ES.map((m, i) => (
                     <option key={i} value={i + 1}>{m}</option>
                   ))}
                 </select>
-                <select style={inputStyle} value={form.start_year} onChange={e => setField('start_year', e.target.value)}>
+                <select
+                  className="w-full px-3 py-2 border-2 border-black bg-white shadow-[3px_3px_0_0_#000] focus:outline-none focus:shadow-[1px_1px_0_0_#000] transition-all"
+                  value={form.start_year}
+                  onChange={e => setField('start_year', e.target.value)}
+                >
                   {YEARS.map(y => <option key={y} value={y}>{y}</option>)}
                 </select>
               </div>
@@ -341,97 +354,89 @@ export default function MonthlyPayments() {
 
             {/* Live preview */}
             {allFilled && previewEnd && (
-              <div style={{ background: '#111', borderLeft: `3px solid ${C.accent}`, borderRadius: 6, padding: '10px 14px', fontSize: 13, color: '#ccc', lineHeight: 1.6 }}>
+              <div className="border-2 border-black border-l-4 bg-(--color-accent) p-3 text-sm font-medium leading-relaxed shadow-[3px_3px_0_0_#000]">
                 Se cobrarán{' '}
-                <strong style={{ color: C.accent }}>${fmtAmount(previewAmount)}</strong>
+                <strong>${fmtAmount(previewAmount)}</strong>
                 {' × '}{previewMonths} meses en{' '}
-                <strong style={{ color: C.text }}>{previewCard?.card_name || previewCard?.bank}</strong>
+                <strong>{previewCard?.card_name || previewCard?.bank}</strong>
                 {' · '}{fmtMonthYear(Number(form.start_month), Number(form.start_year))}
                 {' → '}{fmtMonthYear(previewEnd.month, previewEnd.year)}
                 <br />
-                <span style={{ color: C.muted }}>Total: </span>
-                <strong style={{ color: C.accent }}>${fmtAmount(previewAmount * previewMonths)}</strong>
+                <span className="text-gray-700">Total: </span>
+                <strong>${fmtAmount(previewAmount * previewMonths)}</strong>
               </div>
             )}
 
-            <button
+            <Button
               type="submit"
+              variant="primary"
+              size="lg"
               disabled={submitting || !allFilled}
-              style={{ ...primaryBtnStyle, opacity: submitting || !allFilled ? 0.5 : 1 }}
+              className="w-full"
             >
               {submitting ? 'Registrando...' : 'Registrar plan'}
-            </button>
+            </Button>
           </form>
-        </div>
+        </CardContent>
+      </Card>
 
-        {/* ════════════════════════════════════════════
-            SECTION B — Plans list
-        ════════════════════════════════════════════ */}
-        <div style={{ background: C.card, border: C.border, borderRadius: 10, padding: '20px 24px' }}>
-
-          {/* Header */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-            <span style={{ fontSize: 14, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: C.accent }}>
-              Planes activos
-            </span>
+      {/* ════════════════════════════════════════════
+          SECTION B — Plans list
+      ════════════════════════════════════════════ */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle>Planes activos</CardTitle>
             {thisMonthCommitment > 0 && (
-              <span style={{ background: '#2a2200', border: `0.5px solid ${C.accent}`, borderRadius: 20, padding: '3px 12px', fontSize: 12, color: C.accent, fontWeight: 600 }}>
+              <span className="bg-(--color-primary) border-2 border-black text-sm font-bold px-3 py-0.5 shadow-[2px_2px_0_0_#000]">
                 Este mes: ${fmtAmount(thisMonthCommitment)}
               </span>
             )}
           </div>
-
+        </CardHeader>
+        <CardContent>
           {activePlans.length === 0 && (
-            <p style={{ color: C.muted, fontSize: 13, margin: 0 }}>No hay planes activos.</p>
+            <p className="text-sm text-gray-500 font-medium py-2">No hay planes activos.</p>
           )}
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {activePlans.map(plan => <PlanCard key={plan.id} plan={plan} cards={cards} nowYear={nowYear} nowMonth={nowMonth} onCancel={() => setConfirmCancel(plan)} />)}
+          <div className="space-y-3">
+            {activePlans.map(plan => (
+              <PlanCard key={plan.id} plan={plan} cards={cards} nowYear={nowYear} nowMonth={nowMonth} onCancel={() => setConfirmCancel(plan)} />
+            ))}
           </div>
 
           {inactivePlans.length > 0 && (
             <>
-              <div style={{ borderTop: '0.5px solid #2e2e2e', margin: '20px 0 16px' }} />
-              <div style={{ opacity: 0.5 }}>
-                <span style={{ fontSize: 12, color: C.muted, textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block', marginBottom: 12 }}>
-                  Completados / Cancelados
-                </span>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                  {inactivePlans.map(plan => <PlanCard key={plan.id} plan={plan} cards={cards} nowYear={nowYear} nowMonth={nowMonth} inactive />)}
-                </div>
+              <div className="border-t-2 border-black mt-5 mb-4" />
+              <p className="text-xs font-black text-gray-500 uppercase tracking-wider mb-3">Completados / Cancelados</p>
+              <div className="space-y-3 opacity-60">
+                {inactivePlans.map(plan => (
+                  <PlanCard key={plan.id} plan={plan} cards={cards} nowYear={nowYear} nowMonth={nowMonth} inactive />
+                ))}
               </div>
             </>
           )}
-        </div>
+        </CardContent>
+      </Card>
 
-        {/* ════════════════════════════════════════════
-            SECTION C — Calendar view
-        ════════════════════════════════════════════ */}
-        {calMonths.length > 0 && (
-          <div style={{ background: C.card, border: C.border, borderRadius: 10, padding: '20px 24px' }}>
-
-            {/* Header + toggle */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-              <span style={{ fontSize: 14, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: C.accent }}>
-                Calendario de pagos
-              </span>
-              <div style={{ display: 'flex', gap: 0, border: '0.5px solid #333', borderRadius: 6, overflow: 'hidden' }}>
-                {['gantt', 'tabla'].map(v => {
+      {/* ════════════════════════════════════════════
+          SECTION C — Calendar view
+      ════════════════════════════════════════════ */}
+      {calMonths.length > 0 && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle>Calendario de pagos</CardTitle>
+              {/* Gantt / Tabla toggle */}
+              <div className="flex border-2 border-black overflow-hidden">
+                {['gantt', 'tabla'].map((v, i) => {
                   const active = calView === v;
                   return (
                     <button
                       key={v}
                       onClick={() => setCalView(v)}
-                      style={{
-                        background: active ? '#2a2200' : '#111',
-                        border: 'none',
-                        borderLeft: v === 'tabla' ? '0.5px solid #333' : 'none',
-                        color: active ? C.accent : '#666',
-                        padding: '5px 14px',
-                        fontSize: 12,
-                        cursor: 'pointer',
-                        fontWeight: active ? 600 : 400,
-                      }}
+                      className={`px-4 py-1 text-sm font-medium cursor-pointer transition-colors ${
+                        i > 0 ? 'border-l-2 border-black' : ''
+                      } ${active ? 'bg-(--color-primary) font-bold' : 'bg-white hover:bg-(--color-accent)'}`}
                     >
                       {v.charAt(0).toUpperCase() + v.slice(1)}
                     </button>
@@ -439,8 +444,9 @@ export default function MonthlyPayments() {
                 })}
               </div>
             </div>
-
-            <div style={{ overflowX: 'auto' }}>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
               {calView === 'gantt'
                 ? <GanttView plans={plans} months={calMonths} yearSpans={yearSpans} monthTotals={monthTotals} nowYear={nowYear} nowMonth={nowMonth} cardName={cardName} />
                 : <TableView plans={plans} months={calMonths} yearSpans={yearSpans} monthTotals={monthTotals} nowYear={nowYear} nowMonth={nowMonth} cardName={cardName} />
@@ -448,41 +454,32 @@ export default function MonthlyPayments() {
             </div>
 
             {/* Legend */}
-            <div style={{ display: 'flex', gap: 18, marginTop: 14, fontSize: 12, color: C.muted, flexWrap: 'wrap' }}>
-              <span><span style={{ color: C.green }}>●</span> Pagado</span>
-              <span><span style={{ color: C.accent }}>●</span> Pendiente</span>
-              <span><span style={{ color: '#555' }}>●</span> Cancelado</span>
-              <span><span style={{ color: C.red }}>●</span> Mes actual</span>
+            <div className="flex flex-wrap gap-4 mt-4 pt-4 border-t-2 border-black text-xs font-bold text-gray-600">
+              <div className="flex items-center gap-1.5"><div className="w-3 h-3 bg-green-400 border border-black" /> Pagado</div>
+              <div className="flex items-center gap-1.5"><div className="w-3 h-3 bg-(--color-primary) border border-black" /> Pendiente</div>
+              <div className="flex items-center gap-1.5"><div className="w-3 h-3 bg-black" /> Mes actual</div>
+              <div className="flex items-center gap-1.5"><div className="w-3 h-3 bg-gray-100 border border-black" /> Cancelado</div>
             </div>
-          </div>
-        )}
-
-      </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* ── Confirm cancel dialog ── */}
       {confirmCancel && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: 16 }}>
-          <div style={{ background: '#1e1e1e', border: '0.5px solid #2e2e2e', borderRadius: 10, padding: '24px', maxWidth: 380, width: '100%' }}>
-            <h3 style={{ fontSize: 15, fontWeight: 700, margin: '0 0 10px', color: C.text }}>
-              ¿Cancelar {confirmCancel.name}?
-            </h3>
-            <p style={{ fontSize: 13, color: C.muted, margin: '0 0 20px', lineHeight: 1.6 }}>
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+          <div className="bg-white border-2 border-black shadow-[6px_6px_0_0_#000] p-6 max-w-sm w-full">
+            <h3 className="font-head text-lg font-black mb-2">¿Cancelar {confirmCancel.name}?</h3>
+            <p className="text-sm text-gray-600 mb-6 leading-relaxed">
               Se eliminarán las cuotas futuras pendientes.
               Las cuotas ya pagadas se conservan.
             </p>
-            <div style={{ display: 'flex', gap: 10 }}>
-              <button
-                onClick={() => setConfirmCancel(null)}
-                style={{ flex: 1, background: '#111', border: '0.5px solid #333', color: C.muted, borderRadius: 6, padding: '8px', cursor: 'pointer', fontSize: 13 }}
-              >
+            <div className="flex gap-3">
+              <Button variant="outline" className="flex-1" onClick={() => setConfirmCancel(null)}>
                 Volver
-              </button>
-              <button
-                onClick={() => handleCancelPlan(confirmCancel)}
-                style={{ flex: 1, background: '#2a0800', border: `0.5px solid ${C.red}`, color: C.red, borderRadius: 6, padding: '8px', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}
-              >
+              </Button>
+              <Button variant="danger" className="flex-1" onClick={() => handleCancelPlan(confirmCancel)}>
                 Cancelar plan
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -490,14 +487,9 @@ export default function MonthlyPayments() {
 
       {/* ── Toast ── */}
       {toast && (
-        <div style={{
-          position: 'fixed', bottom: 96, left: '50%', transform: 'translateX(-50%)',
-          background: toast.isError ? '#2a0800' : '#1a3a1a',
-          border: `0.5px solid ${toast.isError ? C.red : C.green}`,
-          color: toast.isError ? C.red : C.green,
-          fontSize: 13, padding: '10px 18px', borderRadius: 10, zIndex: 200,
-          maxWidth: 360, textAlign: 'center', pointerEvents: 'none',
-        }}>
+        <div className={`fixed bottom-24 left-1/2 -translate-x-1/2 z-50 border-2 border-black px-4 py-2.5 text-sm font-bold shadow-[4px_4px_0_0_#000] max-w-sm text-center pointer-events-none ${
+          toast.isError ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'
+        }`}>
           {toast.msg}
         </div>
       )}
@@ -507,7 +499,6 @@ export default function MonthlyPayments() {
 
 // ── PlanCard ──────────────────────────────────────────────────────────────────
 function PlanCard({ plan, cards, nowYear, nowMonth, onCancel, inactive }) {
-  const MONTHS_ES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
   const card = cards.find(c => c.id === plan.card_id);
   const cardLabel = card ? (card.card_name || card.bank) : '—';
   const paidCount = plan.paid_count || 0;
@@ -516,35 +507,33 @@ function PlanCard({ plan, cards, nowYear, nowMonth, onCancel, inactive }) {
   const nextB = plan.next_billing;
 
   return (
-    <div style={{ background: '#161616', border: '0.5px solid #2e2e2e', borderRadius: 10, padding: '14px 16px' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-            <span style={{ fontSize: 14, fontWeight: 700, color: '#e0e0e0' }}>{plan.name}</span>
-            <span style={{ fontSize: 11, color: '#888' }}>{cardLabel} · {paidCount} de {plan.total_months} meses</span>
+    <div className="bg-white border-2 border-black shadow-[3px_3px_0_0_#000] p-4">
+      <div className="flex justify-between items-start gap-3">
+        <div className="flex-1 min-w-0">
+          <div className="flex flex-wrap items-center gap-2 mb-1">
+            <span className="font-bold text-sm">{plan.name}</span>
+            <span className="text-xs text-gray-500">{cardLabel} · {paidCount} de {plan.total_months} meses</span>
           </div>
-          <div style={{ marginTop: 4 }}>
-            <span style={{ fontSize: 15, fontWeight: 700, color: '#d4b72e' }}>${fmtAmount(plan.monthly_amount)}<span style={{ fontSize: 11, color: '#888', fontWeight: 400 }}>/mes</span></span>
-            <span style={{ fontSize: 11, color: '#888', marginLeft: 10 }}>Total ${fmtAmount(Number(plan.monthly_amount) * plan.total_months)}</span>
+          <div className="flex items-baseline gap-3">
+            <span className="text-base font-black">${fmtAmount(plan.monthly_amount)}<span className="text-xs font-normal text-gray-500">/mes</span></span>
+            <span className="text-xs text-gray-500">Total ${fmtAmount(Number(plan.monthly_amount) * plan.total_months)}</span>
           </div>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+        <div className="flex items-center gap-2 flex-shrink-0">
           {!inactive && (
-            <span style={{ background: '#1a3a1a', color: '#4CAF50', border: '0.5px solid #4CAF50', borderRadius: 20, fontSize: 11, padding: '2px 10px', fontWeight: 600 }}>
+            <span className="bg-green-400 border border-black text-xs font-bold px-2 py-0.5">
               Activo
             </span>
           )}
           {inactive && (
-            <span style={{ background: '#1a1a1a', color: '#555', border: '0.5px solid #333', borderRadius: 20, fontSize: 11, padding: '2px 10px' }}>
+            <span className="bg-gray-200 border border-black text-gray-600 text-xs font-bold px-2 py-0.5">
               {plan.status === 'cancelled' ? 'Cancelado' : 'Completado'}
             </span>
           )}
           {!inactive && onCancel && (
             <button
               onClick={onCancel}
-              style={{ background: 'transparent', border: '0.5px solid #444', color: '#888', borderRadius: 6, padding: '3px 10px', cursor: 'pointer', fontSize: 11 }}
-              onMouseEnter={e => { e.currentTarget.style.borderColor = '#e53935'; e.currentTarget.style.color = '#e53935'; }}
-              onMouseLeave={e => { e.currentTarget.style.borderColor = '#444'; e.currentTarget.style.color = '#888'; }}
+              className="text-xs font-bold border-2 border-black px-2 py-0.5 bg-white hover:bg-red-100 hover:border-red-500 hover:text-red-600 transition-colors cursor-pointer"
             >
               Cancelar
             </button>
@@ -553,12 +542,15 @@ function PlanCard({ plan, cards, nowYear, nowMonth, onCancel, inactive }) {
       </div>
 
       {/* Progress bar */}
-      <div style={{ margin: '10px 0 6px', height: 4, background: '#2a2a2a', borderRadius: 3, overflow: 'hidden' }}>
-        <div style={{ height: '100%', width: `${progress}%`, background: '#4CAF50', borderRadius: 3, transition: 'width 0.4s' }} />
+      <div className="mt-3 mb-2 h-2 bg-gray-200 border border-black overflow-hidden">
+        <div
+          className="h-full bg-green-400 transition-all duration-500"
+          style={{ width: `${progress}%` }}
+        />
       </div>
 
       {/* Meta */}
-      <div style={{ fontSize: 11, color: '#888' }}>
+      <div className="text-xs text-gray-500 font-medium">
         {nextB && <span>Próximo cobro: {MONTHS_ES[nextB.billing_month - 1]} {nextB.billing_year} · </span>}
         <span>Termina: {MONTHS_ES[end.month - 1]} {end.year}</span>
       </div>
@@ -568,33 +560,32 @@ function PlanCard({ plan, cards, nowYear, nowMonth, onCancel, inactive }) {
 
 // ── GanttView ─────────────────────────────────────────────────────────────────
 function GanttView({ plans, months, yearSpans, monthTotals, nowYear, nowMonth, cardName }) {
-  const MONTHS_ES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
   const COL = 34;
   const LABEL = 140;
 
   return (
-    <table style={{ borderCollapse: 'separate', borderSpacing: 0, tableLayout: 'fixed', width: LABEL + months.length * COL }}>
+    <table style={{ borderCollapse: 'collapse', tableLayout: 'fixed', width: LABEL + months.length * COL }}>
       <colgroup>
         <col style={{ width: LABEL }} />
         {months.map((_, i) => <col key={i} style={{ width: COL }} />)}
       </colgroup>
       <thead>
         {/* Year row */}
-        <tr>
+        <tr className="border-b-2 border-black bg-(--color-primary)">
           <td />
           {yearSpans.map((s, i) => (
-            <td key={i} colSpan={s.count} style={{ fontSize: 11, color: '#d4b72e', fontWeight: 700, paddingBottom: 4, paddingLeft: 4, borderBottom: '0.5px solid #2e2e2e', whiteSpace: 'nowrap' }}>
+            <td key={i} colSpan={s.count} className="text-xs font-black px-1 py-1 border-r-2 border-black whitespace-nowrap">
               {s.year}
             </td>
           ))}
         </tr>
         {/* Month row */}
-        <tr>
-          <td style={{ fontSize: 11, color: '#555', paddingBottom: 6, paddingRight: 8, textAlign: 'right' }}>Plan</td>
+        <tr className="border-b-2 border-black bg-(--color-accent)">
+          <td className="text-xs font-bold text-gray-500 pr-2 text-right py-1">Plan</td>
           {months.map(({ year, month }, i) => {
             const isCur = year === nowYear && month === nowMonth;
             return (
-              <td key={i} style={{ fontSize: 10, textAlign: 'center', paddingBottom: 6, color: isCur ? '#d4b72e' : '#555', fontWeight: isCur ? 700 : 400, whiteSpace: 'nowrap' }}>
+              <td key={i} className={`text-center py-1 border-r border-black text-[10px] whitespace-nowrap ${isCur ? 'bg-black text-white font-black' : 'font-bold text-gray-600'}`}>
                 {MONTHS_ES[month - 1]}
               </td>
             );
@@ -605,33 +596,20 @@ function GanttView({ plans, months, yearSpans, monthTotals, nowYear, nowMonth, c
         {plans.map(plan => {
           const segments = getGanttSegments(plan, months, nowYear, nowMonth);
           return (
-            <tr key={plan.id}>
-              <td style={{ fontSize: 12, fontWeight: 700, color: '#e0e0e0', paddingRight: 10, paddingBottom: 6, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: LABEL, verticalAlign: 'middle' }}>
+            <tr key={plan.id} className="border-b border-black">
+              <td className="text-xs font-bold pr-2 py-1 whitespace-nowrap overflow-hidden" style={{ maxWidth: LABEL, textOverflow: 'ellipsis' }}>
                 {plan.name}
-                <div style={{ fontSize: 10, color: '#666', fontWeight: 400 }}>{cardName(plan.card_id)}</div>
+                <div className="text-[10px] font-normal text-gray-500">{cardName(plan.card_id)}</div>
               </td>
               {segments.map((seg, si) => {
                 const span = seg.endIdx - seg.startIdx + 1;
                 const st = seg.state;
-                const cs = st ? cellStyle[st] : null;
-                const showLabel = span > 2 && st && st !== null;
+                const showLabel = span > 2 && st;
                 return (
-                  <td
-                    key={si}
-                    colSpan={span}
-                    style={{
-                      height: 28,
-                      padding: '2px 3px',
-                      verticalAlign: 'middle',
-                    }}
-                  >
-                    {cs && (
-                      <div style={{ ...cs, height: 22, borderRadius: 3, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, overflow: 'hidden', whiteSpace: 'nowrap' }}>
-                        {showLabel && (
-                          <span style={{ padding: '0 4px' }}>
-                            {st === 'paid' ? 'Pagado' : st === 'pending' ? 'Pendiente' : st === 'current' ? 'Actual' : 'Cancelado'}
-                          </span>
-                        )}
+                  <td key={si} colSpan={span} className="py-1 px-0.5 border-r border-black" style={{ height: 32 }}>
+                    {st && (
+                      <div className={`h-6 flex items-center justify-center text-[10px] font-bold overflow-hidden ${cellClasses(st)}`}>
+                        {showLabel && (st === 'paid' ? 'Pagado' : st === 'pending' ? 'Pendiente' : st === 'current' ? 'Actual' : '')}
                       </div>
                     )}
                   </td>
@@ -642,16 +620,14 @@ function GanttView({ plans, months, yearSpans, monthTotals, nowYear, nowMonth, c
         })}
 
         {/* Total row */}
-        <tr style={{ borderTop: '0.5px solid #2e2e2e' }}>
-          <td style={{ fontSize: 11, color: '#888', paddingTop: 8, paddingRight: 10, fontWeight: 600, verticalAlign: 'middle' }}>Total</td>
+        <tr className="border-t-2 border-black bg-gray-50">
+          <td className="text-xs font-black pr-2 py-1">Total</td>
           {monthTotals.map((total, i) => {
             const { year, month } = months[i];
             const isCur = year === nowYear && month === nowMonth;
-            const col = isCur ? '#fff' : total > 8000 ? '#e53935' : total > 5000 ? '#d4b72e' : '#4CAF50';
-            const bg = isCur ? '#e53935' : 'transparent';
             return (
-              <td key={i} style={{ fontSize: 10, textAlign: 'center', paddingTop: 8, color: col, background: bg, fontWeight: 600, borderRadius: 3 }}>
-                {total > 0 ? fmtK(total) : ''}
+              <td key={i} className={`text-center py-1 border-r border-black text-[10px] ${total > 0 ? totalCellClasses(total, isCur) : 'text-gray-300'}`}>
+                {total > 0 ? fmtK(total) : '—'}
               </td>
             );
           })}
@@ -663,33 +639,32 @@ function GanttView({ plans, months, yearSpans, monthTotals, nowYear, nowMonth, c
 
 // ── TableView ─────────────────────────────────────────────────────────────────
 function TableView({ plans, months, yearSpans, monthTotals, nowYear, nowMonth, cardName }) {
-  const MONTHS_ES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
-  const COL = 80;
+  const COL = 86;
   const LABEL = 140;
 
   return (
-    <table style={{ borderCollapse: 'separate', borderSpacing: 0, tableLayout: 'fixed', width: LABEL + months.length * COL }}>
+    <table style={{ borderCollapse: 'collapse', tableLayout: 'fixed', width: LABEL + months.length * COL }}>
       <colgroup>
         <col style={{ width: LABEL }} />
         {months.map((_, i) => <col key={i} style={{ width: COL }} />)}
       </colgroup>
       <thead>
         {/* Year row */}
-        <tr>
+        <tr className="border-b-2 border-black bg-(--color-primary)">
           <td />
           {yearSpans.map((s, i) => (
-            <td key={i} colSpan={s.count} style={{ fontSize: 11, color: '#d4b72e', fontWeight: 700, paddingBottom: 4, paddingLeft: 4, borderBottom: '0.5px solid #2e2e2e', whiteSpace: 'nowrap' }}>
+            <td key={i} colSpan={s.count} className="text-xs font-black px-1 py-1 border-r-2 border-black whitespace-nowrap">
               {s.year}
             </td>
           ))}
         </tr>
         {/* Month row */}
-        <tr>
-          <td style={{ fontSize: 11, color: '#555', paddingBottom: 6, paddingRight: 8, textAlign: 'right' }}>Plan</td>
+        <tr className="border-b-2 border-black bg-(--color-accent)">
+          <td className="text-xs font-bold text-gray-500 pr-2 text-right py-1">Plan</td>
           {months.map(({ year, month }, i) => {
             const isCur = year === nowYear && month === nowMonth;
             return (
-              <td key={i} style={{ fontSize: 10, textAlign: 'center', paddingBottom: 6, color: isCur ? '#d4b72e' : '#555', fontWeight: isCur ? 700 : 400 }}>
+              <td key={i} className={`text-center py-1 border-r border-black text-[10px] whitespace-nowrap ${isCur ? 'bg-black text-white font-black' : 'font-bold text-gray-600'}`}>
                 {MONTHS_ES[month - 1]}
               </td>
             );
@@ -698,23 +673,19 @@ function TableView({ plans, months, yearSpans, monthTotals, nowYear, nowMonth, c
       </thead>
       <tbody>
         {plans.map(plan => (
-          <tr key={plan.id}>
-            <td style={{ fontSize: 12, fontWeight: 700, color: '#e0e0e0', paddingRight: 10, paddingBottom: 4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: LABEL, verticalAlign: 'middle' }}>
+          <tr key={plan.id} className="border-b border-black">
+            <td className="text-xs font-bold pr-2 py-1 whitespace-nowrap overflow-hidden" style={{ maxWidth: LABEL, textOverflow: 'ellipsis' }}>
               {plan.name}
-              <div style={{ fontSize: 10, color: '#666', fontWeight: 400 }}>{cardName(plan.card_id)}</div>
+              <div className="text-[10px] font-normal text-gray-500">{cardName(plan.card_id)}</div>
             </td>
             {months.map(({ year, month }, i) => {
               const state = getCellState(plan, year, month, nowYear, nowMonth);
-              const cs = state ? cellStyle[state] : null;
               return (
-                <td key={i} style={{ padding: '2px 3px', verticalAlign: 'middle', height: 28 }}>
-                  {cs && state !== 'cancelled' && (
-                    <div style={{ ...cs, height: 22, borderRadius: 3, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, whiteSpace: 'nowrap' }}>
-                      ${fmtAmount(plan.monthly_amount)}
+                <td key={i} className="p-0.5 border-r border-black" style={{ height: 32 }}>
+                  {state && (
+                    <div className={`h-6 flex items-center justify-center text-[10px] font-bold ${cellClasses(state)}`}>
+                      {state !== 'cancelled' ? `$${fmtAmount(plan.monthly_amount)}` : ''}
                     </div>
-                  )}
-                  {state === 'cancelled' && (
-                    <div style={{ ...cs, height: 22, borderRadius: 3 }} />
                   )}
                 </td>
               );
@@ -723,16 +694,14 @@ function TableView({ plans, months, yearSpans, monthTotals, nowYear, nowMonth, c
         ))}
 
         {/* Total row */}
-        <tr style={{ borderTop: '0.5px solid #2e2e2e' }}>
-          <td style={{ fontSize: 11, color: '#888', paddingTop: 8, paddingRight: 10, fontWeight: 600 }}>Total</td>
+        <tr className="border-t-2 border-black bg-gray-50">
+          <td className="text-xs font-black pr-2 py-1">Total</td>
           {monthTotals.map((total, i) => {
             const { year, month } = months[i];
             const isCur = year === nowYear && month === nowMonth;
-            const col = isCur ? '#fff' : total > 8000 ? '#e53935' : total > 5000 ? '#d4b72e' : '#4CAF50';
-            const bg = isCur ? '#e53935' : 'transparent';
             return (
-              <td key={i} style={{ fontSize: 10, textAlign: 'center', paddingTop: 8, color: col, background: bg, fontWeight: 600, borderRadius: 3 }}>
-                {total > 0 ? `$${fmtAmount(total)}` : ''}
+              <td key={i} className={`text-center py-1 border-r border-black text-[10px] ${total > 0 ? totalCellClasses(total, isCur) : 'text-gray-300'}`}>
+                {total > 0 ? `$${fmtAmount(total)}` : '—'}
               </td>
             );
           })}
@@ -741,30 +710,3 @@ function TableView({ plans, months, yearSpans, monthTotals, nowYear, nowMonth, c
     </table>
   );
 }
-
-// ── Shared style objects ──────────────────────────────────────────────────────
-const labelStyle = {
-  display: 'block', fontSize: 12, color: '#888', marginBottom: 6, fontWeight: 500,
-};
-
-const inputStyle = {
-  background: '#111', border: '0.5px solid #2e2e2e', borderRadius: 6,
-  color: '#e0e0e0', padding: '8px 12px', fontSize: 14, width: '100%',
-  outline: 'none', boxSizing: 'border-box',
-};
-
-const segInactiveStyle = {
-  background: '#111', border: '0.5px solid #333', color: '#999',
-  borderRadius: 6, padding: '6px 14px', cursor: 'pointer', fontSize: 13,
-};
-
-const segActiveStyle = {
-  background: '#2a2200', border: '0.5px solid #d4b72e', color: '#d4b72e',
-  borderRadius: 6, padding: '6px 14px', cursor: 'pointer', fontSize: 13, fontWeight: 600,
-};
-
-const primaryBtnStyle = {
-  background: '#d4b72e', color: '#111', borderRadius: 6, border: 'none',
-  fontWeight: 700, padding: '11px 20px', cursor: 'pointer', width: '100%',
-  fontSize: 14, fontFamily: 'DM Sans, sans-serif',
-};
