@@ -104,20 +104,28 @@ export const getInstallmentPlans = async (req, res) => {
     const planIds = plans.map(p => p.id);
     const { data: txRows, error: txError } = await supabaseAdmin
       .from('card_transactions')
-      .select('installment_plan_id, installment_status, billing_month, billing_year')
+      .select('id, installment_plan_id, installment_status, billing_month, billing_year')
       .in('installment_plan_id', planIds);
 
     if (txError) throw txError;
 
-    // Build a map: plan_id → { paid_count, remaining_count, next_billing }
+    // Build maps: plan_id → aggregates & plan_id → transactions[]
     const aggregates = {};
+    const planTransactions = {};
     for (const planId of planIds) {
       aggregates[planId] = { paid_count: 0, remaining_count: 0, next_billing: null };
+      planTransactions[planId] = [];
     }
 
     for (const tx of txRows || []) {
       const agg = aggregates[tx.installment_plan_id];
       if (!agg) continue;
+      planTransactions[tx.installment_plan_id].push({
+        id: tx.id,
+        billing_year: tx.billing_year,
+        billing_month: tx.billing_month,
+        installment_status: tx.installment_status,
+      });
       if (tx.installment_status === 'paid') {
         agg.paid_count++;
       } else if (tx.installment_status === 'pending') {
@@ -134,7 +142,7 @@ export const getInstallmentPlans = async (req, res) => {
     }
 
     // Merge and sort: active first, then completed/cancelled, then by created_at desc
-    const enriched = plans.map(p => ({ ...p, ...aggregates[p.id] }));
+    const enriched = plans.map(p => ({ ...p, ...aggregates[p.id], transactions: planTransactions[p.id] || [] }));
     enriched.sort((a, b) => {
       if (a.status === 'active' && b.status !== 'active') return -1;
       if (a.status !== 'active' && b.status === 'active') return 1;
@@ -144,6 +152,123 @@ export const getInstallmentPlans = async (req, res) => {
     res.json({ success: true, data: enriched });
   } catch (error) {
     console.error('Error fetching installment plans:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+
+// ─── PUT /api/installment-plans/:id  (edit plan) ────────────────────────────
+
+export const updateInstallmentPlan = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, card_id, monthly_amount } = req.body;
+
+    // Verify ownership + active status
+    const { data: plan, error: fetchError } = await supabaseAdmin
+      .from('installment_plans')
+      .select('id, user_id, status, monthly_amount')
+      .eq('id', id)
+      .single();
+
+    if (fetchError || !plan) {
+      return res.status(404).json({ success: false, error: 'Installment plan not found' });
+    }
+    if (plan.user_id !== req.user.id) {
+      return res.status(403).json({ success: false, error: 'Forbidden' });
+    }
+    if (plan.status !== 'active') {
+      return res.status(400).json({ success: false, error: 'Only active plans can be edited' });
+    }
+
+    const updates = { updated_at: new Date().toISOString() };
+    if (name) updates.name = name;
+    if (card_id) updates.card_id = card_id;
+    if (monthly_amount != null) updates.monthly_amount = Number(monthly_amount);
+
+    const { data: updatedPlan, error: updateError } = await supabaseAdmin
+      .from('installment_plans')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (updateError) throw updateError;
+
+    // Update pending transactions
+    const txUpdates = {};
+    const amountChanged = monthly_amount != null && Number(monthly_amount) !== Number(plan.monthly_amount);
+    if (amountChanged) txUpdates.amount = Number(monthly_amount);
+    if (name) txUpdates.merchant = name;
+    if (Object.keys(txUpdates).length > 0) {
+      txUpdates.updated_at = new Date().toISOString();
+      const { error: txError } = await supabaseAdmin
+        .from('card_transactions')
+        .update(txUpdates)
+        .eq('installment_plan_id', id)
+        .eq('installment_status', 'pending');
+      if (txError) throw txError;
+    }
+
+    res.json({ success: true, plan: updatedPlan });
+  } catch (error) {
+    console.error('Error updating installment plan:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+
+// ─── PATCH /api/installment-plans/:id/toggle-installment ─────────────────────
+
+export const toggleInstallment = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { billing_year, billing_month } = req.body;
+
+    if (!billing_year || !billing_month) {
+      return res.status(400).json({ success: false, error: 'billing_year and billing_month are required' });
+    }
+
+    // Verify plan ownership
+    const { data: plan, error: planError } = await supabaseAdmin
+      .from('installment_plans')
+      .select('id, user_id')
+      .eq('id', id)
+      .single();
+
+    if (planError || !plan) {
+      return res.status(404).json({ success: false, error: 'Installment plan not found' });
+    }
+    if (plan.user_id !== req.user.id) {
+      return res.status(403).json({ success: false, error: 'Forbidden' });
+    }
+
+    // Find the specific transaction
+    const { data: tx, error: txFetchError } = await supabaseAdmin
+      .from('card_transactions')
+      .select('id, installment_status')
+      .eq('installment_plan_id', id)
+      .eq('billing_year', Number(billing_year))
+      .eq('billing_month', Number(billing_month))
+      .single();
+
+    if (txFetchError || !tx) {
+      return res.status(404).json({ success: false, error: 'Installment not found for that month' });
+    }
+    if (tx.installment_status === 'cancelled') {
+      return res.status(400).json({ success: false, error: 'Cannot toggle a cancelled installment' });
+    }
+
+    const newStatus = tx.installment_status === 'paid' ? 'pending' : 'paid';
+
+    const { error: updateError } = await supabaseAdmin
+      .from('card_transactions')
+      .update({ installment_status: newStatus, updated_at: new Date().toISOString() })
+      .eq('id', tx.id);
+
+    if (updateError) throw updateError;
+
+    res.json({ success: true, new_status: newStatus });
+  } catch (error) {
+    console.error('Error toggling installment:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 };

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { CalendarClock } from 'lucide-react';
+import { CalendarClock, ChevronDown, ChevronUp, Check } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import api from '../lib/api';
@@ -51,6 +51,15 @@ function getCellState(plan, year, month, nowYear, nowMonth) {
   const afterStart = year > sy || (year === sy && month >= sm);
   const beforeEnd = year < end.year || (year === end.year && month <= end.month);
   if (!afterStart || !beforeEnd) return null;
+  // Use actual transaction status when available (respects manual paid/unpaid toggles)
+  const tx = plan.transactions?.find(t => t.billing_year === year && t.billing_month === month);
+  if (tx) {
+    if (tx.installment_status === 'cancelled') return 'cancelled';
+    if (tx.installment_status === 'paid') return 'paid';
+    if (year === nowYear && month === nowMonth) return 'current';
+    return 'pending';
+  }
+  // Fallback date-based logic
   const isFuture = year > nowYear || (year === nowYear && month > nowMonth);
   if (plan.status === 'cancelled' && isFuture) return 'cancelled';
   if (year < nowYear || (year === nowYear && month < nowMonth)) return 'paid';
@@ -127,6 +136,10 @@ export default function MonthlyPayments() {
   const [calView, setCalView] = useState('gantt');
   const [confirmCancel, setConfirmCancel] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+  const [editPlan, setEditPlan] = useState(null);
+  const [editForm, setEditForm] = useState({ name: '', card_id: '', monthly_amount: '' });
+  const [editSubmitting, setEditSubmitting] = useState(false);
+  const [toggling, setToggling] = useState(null); // 'planId-year-month'
 
   const [form, setForm] = useState({
     name: '',
@@ -210,6 +223,50 @@ export default function MonthlyPayments() {
       await fetchAll();
     } catch (err) {
       showToast(err.response?.data?.error || 'Error al cancelar plan', true);
+    }
+  }
+
+  // ── Edit plan ────────────────────────────────────────────────────────────────
+  function openEdit(plan) {
+    setEditForm({ name: plan.name, card_id: plan.card_id, monthly_amount: String(plan.monthly_amount) });
+    setEditPlan(plan);
+  }
+
+  async function handleEditPlan(e) {
+    e.preventDefault();
+    if (!editPlan || !editForm.name || !editForm.card_id || !editForm.monthly_amount) return;
+    try {
+      setEditSubmitting(true);
+      await api.put(`/installment-plans/${editPlan.id}`, {
+        name: editForm.name,
+        card_id: editForm.card_id,
+        monthly_amount: Number(editForm.monthly_amount),
+      });
+      showToast('Plan actualizado');
+      setEditPlan(null);
+      await fetchAll();
+    } catch (err) {
+      showToast(err.response?.data?.error || 'Error al actualizar plan', true);
+    } finally {
+      setEditSubmitting(false);
+    }
+  }
+
+  // ── Toggle installment paid/pending ──────────────────────────────────────────
+  async function handleToggleInstallment(planId, year, month) {
+    const key = `${planId}-${year}-${month}`;
+    if (toggling === key) return;
+    try {
+      setToggling(key);
+      await api.patch(`/installment-plans/${planId}/toggle-installment`, {
+        billing_year: year,
+        billing_month: month,
+      });
+      await fetchAll();
+    } catch (err) {
+      showToast(err.response?.data?.error || 'Error al cambiar estado', true);
+    } finally {
+      setToggling(null);
     }
   }
 
@@ -400,7 +457,7 @@ export default function MonthlyPayments() {
           )}
           <div className="space-y-3">
             {activePlans.map(plan => (
-              <PlanCard key={plan.id} plan={plan} cards={cards} nowYear={nowYear} nowMonth={nowMonth} onCancel={() => setConfirmCancel(plan)} />
+              <PlanCard key={plan.id} plan={plan} cards={cards} nowYear={nowYear} nowMonth={nowMonth} onCancel={() => setConfirmCancel(plan)} onEdit={() => openEdit(plan)} onToggle={handleToggleInstallment} />
             ))}
           </div>
 
@@ -449,7 +506,7 @@ export default function MonthlyPayments() {
             <div className="overflow-x-auto">
               {calView === 'gantt'
                 ? <GanttView plans={plans} months={calMonths} yearSpans={yearSpans} monthTotals={monthTotals} nowYear={nowYear} nowMonth={nowMonth} cardName={cardName} />
-                : <TableView plans={plans} months={calMonths} yearSpans={yearSpans} monthTotals={monthTotals} nowYear={nowYear} nowMonth={nowMonth} cardName={cardName} />
+                : <TableView plans={plans} months={calMonths} yearSpans={yearSpans} monthTotals={monthTotals} nowYear={nowYear} nowMonth={nowMonth} cardName={cardName} onToggle={handleToggleInstallment} />
               }
             </div>
 
@@ -462,6 +519,70 @@ export default function MonthlyPayments() {
             </div>
           </CardContent>
         </Card>
+      )}
+
+      {/* ── Edit plan modal ── */}
+      {editPlan && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+          <div className="bg-white border-2 border-black shadow-[6px_6px_0_0_#000] p-6 max-w-md w-full">
+            <h3 className="font-head text-lg font-black mb-4 border-b-2 border-black pb-2">
+              Editar · {editPlan.name}
+            </h3>
+            <form onSubmit={handleEditPlan} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">Nombre</label>
+                <input
+                  className="w-full px-3 py-2 border-2 border-black bg-white shadow-[3px_3px_0_0_#000] focus:outline-none focus:shadow-[1px_1px_0_0_#000] transition-all"
+                  value={editForm.name}
+                  onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Tarjeta</label>
+                <div className="flex flex-wrap gap-2">
+                  {cards.filter(c => c.status !== 'inactive').map(c => {
+                    const active = editForm.card_id === c.id;
+                    return (
+                      <button
+                        key={c.id}
+                        type="button"
+                        onClick={() => setEditForm(f => ({ ...f, card_id: c.id }))}
+                        className={`px-3 py-1.5 text-sm font-medium border-2 border-black transition-all cursor-pointer ${
+                          active ? 'bg-(--color-primary) font-bold shadow-[2px_2px_0_0_#000]' : 'bg-white hover:bg-(--color-accent)'
+                        }`}
+                      >
+                        {c.card_name || c.bank}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Monto mensual</label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm font-bold">$</span>
+                  <input
+                    className="w-full pl-7 pr-3 py-2 border-2 border-black bg-white shadow-[3px_3px_0_0_#000] focus:outline-none focus:shadow-[1px_1px_0_0_#000] transition-all"
+                    type="number"
+                    min="0.01"
+                    step="0.01"
+                    value={editForm.monthly_amount}
+                    onChange={e => setEditForm(f => ({ ...f, monthly_amount: e.target.value }))}
+                  />
+                </div>
+                <p className="text-xs text-gray-500 mt-1">Solo se actualizarán las cuotas pendientes</p>
+              </div>
+              <div className="flex gap-3 pt-2">
+                <Button type="button" variant="outline" className="flex-1" onClick={() => setEditPlan(null)}>
+                  Volver
+                </Button>
+                <Button type="submit" variant="primary" className="flex-1" disabled={editSubmitting}>
+                  {editSubmitting ? 'Guardando...' : 'Guardar cambios'}
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
 
       {/* ── Confirm cancel dialog ── */}
@@ -498,13 +619,17 @@ export default function MonthlyPayments() {
 }
 
 // ── PlanCard ──────────────────────────────────────────────────────────────────
-function PlanCard({ plan, cards, nowYear, nowMonth, onCancel, inactive }) {
+function PlanCard({ plan, cards, nowYear, nowMonth, onCancel, onEdit, onToggle, inactive }) {
+  const [expanded, setExpanded] = useState(false);
   const card = cards.find(c => c.id === plan.card_id);
   const cardLabel = card ? (card.card_name || card.bank) : '—';
   const paidCount = plan.paid_count || 0;
   const progress = plan.total_months > 0 ? (paidCount / plan.total_months) * 100 : 0;
   const end = addMonths(plan.start_year, plan.start_month, plan.total_months - 1);
   const nextB = plan.next_billing;
+  const sortedTxs = plan.transactions
+    ? [...plan.transactions].sort((a, b) => a.billing_year - b.billing_year || a.billing_month - b.billing_month)
+    : [];
 
   return (
     <div className="bg-white border-2 border-black shadow-[3px_3px_0_0_#000] p-4">
@@ -530,6 +655,14 @@ function PlanCard({ plan, cards, nowYear, nowMonth, onCancel, inactive }) {
               {plan.status === 'cancelled' ? 'Cancelado' : 'Completado'}
             </span>
           )}
+          {!inactive && onEdit && (
+            <button
+              onClick={onEdit}
+              className="text-xs font-bold border-2 border-black px-2 py-0.5 bg-white hover:bg-(--color-accent) transition-colors cursor-pointer"
+            >
+              Editar
+            </button>
+          )}
           {!inactive && onCancel && (
             <button
               onClick={onCancel}
@@ -554,6 +687,49 @@ function PlanCard({ plan, cards, nowYear, nowMonth, onCancel, inactive }) {
         {nextB && <span>Próximo cobro: {MONTHS_ES[nextB.billing_month - 1]} {nextB.billing_year} · </span>}
         <span>Termina: {MONTHS_ES[end.month - 1]} {end.year}</span>
       </div>
+
+      {/* Expandable installments list */}
+      {sortedTxs.length > 0 && (
+        <>
+          <button
+            onClick={() => setExpanded(e => !e)}
+            className="flex items-center gap-1 text-xs font-bold text-gray-500 hover:text-black mt-2 cursor-pointer transition-colors"
+          >
+            {expanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+            {expanded ? 'Ocultar cuotas' : `Ver cuotas (${sortedTxs.length})`}
+          </button>
+          {expanded && (
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {sortedTxs.map(tx => {
+                const isPaid = tx.installment_status === 'paid';
+                const isCancelled = tx.installment_status === 'cancelled';
+                const isCurrent = tx.billing_year === nowYear && tx.billing_month === nowMonth && !isPaid && !isCancelled;
+                const label = `${MONTHS_ES[tx.billing_month - 1]} ${tx.billing_year}`;
+                return (
+                  <button
+                    key={tx.id}
+                    disabled={isCancelled || !onToggle}
+                    onClick={() => onToggle?.(plan.id, tx.billing_year, tx.billing_month)}
+                    title={isPaid ? 'Marcar como pendiente' : isCancelled ? 'Cancelado' : 'Marcar como pagado'}
+                    className={`text-[10px] font-bold px-2 py-0.5 border border-black transition-all flex items-center gap-1 ${
+                      isCancelled
+                        ? 'bg-gray-100 text-gray-400 border-gray-300 cursor-default'
+                        : isPaid
+                        ? 'bg-green-400 hover:bg-green-300 cursor-pointer'
+                        : isCurrent
+                        ? 'bg-black text-white hover:bg-gray-700 cursor-pointer'
+                        : 'bg-(--color-primary) hover:bg-(--color-accent) cursor-pointer'
+                    }`}
+                  >
+                    {isPaid && <Check className="h-2.5 w-2.5" />}
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 }
@@ -638,7 +814,7 @@ function GanttView({ plans, months, yearSpans, monthTotals, nowYear, nowMonth, c
 }
 
 // ── TableView ─────────────────────────────────────────────────────────────────
-function TableView({ plans, months, yearSpans, monthTotals, nowYear, nowMonth, cardName }) {
+function TableView({ plans, months, yearSpans, monthTotals, nowYear, nowMonth, cardName, onToggle }) {
   const COL = 86;
   const LABEL = 140;
 
@@ -680,10 +856,15 @@ function TableView({ plans, months, yearSpans, monthTotals, nowYear, nowMonth, c
             </td>
             {months.map(({ year, month }, i) => {
               const state = getCellState(plan, year, month, nowYear, nowMonth);
+              const canToggle = state && state !== 'cancelled' && onToggle;
               return (
                 <td key={i} className="p-0.5 border-r border-black" style={{ height: 32 }}>
                   {state && (
-                    <div className={`h-6 flex items-center justify-center text-[10px] font-bold ${cellClasses(state)}`}>
+                    <div
+                      className={`h-6 flex items-center justify-center text-[10px] font-bold ${cellClasses(state)} ${canToggle ? 'cursor-pointer hover:opacity-75' : ''}`}
+                      onClick={() => canToggle && onToggle(plan.id, year, month)}
+                      title={canToggle ? (state === 'paid' ? 'Marcar como pendiente' : 'Marcar como pagado') : undefined}
+                    >
                       {state !== 'cancelled' ? `$${fmtAmount(plan.monthly_amount)}` : ''}
                     </div>
                   )}

@@ -88,6 +88,8 @@ router.get('/analytics/trends', analyticsController.getSpendingTrends);
 // ==================== Installment Plans Routes ====================
 router.get('/installment-plans', installmentController.getInstallmentPlans);
 router.post('/installment-plans', installmentController.createInstallmentPlan);
+router.put('/installment-plans/:id', installmentController.updateInstallmentPlan);
+router.patch('/installment-plans/:id/toggle-installment', installmentController.toggleInstallment);
 router.delete('/installment-plans/:id', installmentController.cancelInstallmentPlan);
 
 // ==================== Card Transactions Routes ====================
