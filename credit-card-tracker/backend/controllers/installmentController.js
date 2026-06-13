@@ -161,12 +161,12 @@ export const getInstallmentPlans = async (req, res) => {
 export const updateInstallmentPlan = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, card_id, monthly_amount } = req.body;
+    const { name, card_id, monthly_amount, start_month, start_year } = req.body;
 
     // Verify ownership + active status
     const { data: plan, error: fetchError } = await supabaseAdmin
       .from('installment_plans')
-      .select('id, user_id, status, monthly_amount')
+      .select('id, user_id, status, monthly_amount, total_months, start_month, start_year, card_id')
       .eq('id', id)
       .single();
 
@@ -185,6 +185,15 @@ export const updateInstallmentPlan = async (req, res) => {
     if (card_id) updates.card_id = card_id;
     if (monthly_amount != null) updates.monthly_amount = Number(monthly_amount);
 
+    const startDateChanged =
+      (start_month != null && Number(start_month) !== Number(plan.start_month)) ||
+      (start_year != null && Number(start_year) !== Number(plan.start_year));
+
+    if (startDateChanged) {
+      updates.start_month = Number(start_month);
+      updates.start_year = Number(start_year);
+    }
+
     const { data: updatedPlan, error: updateError } = await supabaseAdmin
       .from('installment_plans')
       .update(updates)
@@ -194,19 +203,61 @@ export const updateInstallmentPlan = async (req, res) => {
 
     if (updateError) throw updateError;
 
-    // Update pending transactions
-    const txUpdates = {};
-    const amountChanged = monthly_amount != null && Number(monthly_amount) !== Number(plan.monthly_amount);
-    if (amountChanged) txUpdates.amount = Number(monthly_amount);
-    if (name) txUpdates.merchant = name;
-    if (Object.keys(txUpdates).length > 0) {
-      txUpdates.updated_at = new Date().toISOString();
+    if (startDateChanged) {
+      // Regenerate all transactions with new billing dates
+      const now = new Date();
+      const nowYear = now.getFullYear();
+      const nowMonth = now.getMonth() + 1;
+      const effectiveName = name || plan.name;
+      const effectiveAmount = monthly_amount != null ? Number(monthly_amount) : Number(plan.monthly_amount);
+      const effectiveCardId = card_id || plan.card_id;
+      const newStartMonth = Number(start_month);
+      const newStartYear = Number(start_year);
+
+      const { error: delError } = await supabaseAdmin
+        .from('card_transactions')
+        .delete()
+        .eq('installment_plan_id', id);
+      if (delError) throw delError;
+
+      const transactions = [];
+      for (let i = 0; i < plan.total_months; i++) {
+        const { year: billing_year, month: billing_month } = addMonths(newStartYear, newStartMonth, i);
+        const isPast = billing_year < nowYear || (billing_year === nowYear && billing_month < nowMonth);
+        transactions.push({
+          user_id: plan.user_id,
+          card_id: effectiveCardId,
+          amount: effectiveAmount,
+          merchant: effectiveName,
+          notes: `Cuota ${i + 1} de ${plan.total_months}`,
+          transaction_date: `${billing_year}-${String(billing_month).padStart(2, '0')}-01`,
+          billing_month,
+          billing_year,
+          source: 'installment',
+          installment_plan_id: id,
+          installment_number: i + 1,
+          installment_status: isPast ? 'paid' : 'pending',
+        });
+      }
+
       const { error: txError } = await supabaseAdmin
         .from('card_transactions')
-        .update(txUpdates)
-        .eq('installment_plan_id', id)
-        .eq('installment_status', 'pending');
+        .insert(transactions);
       if (txError) throw txError;
+    } else {
+      // Update pending transactions in place (name + amount only)
+      const txUpdates = {};
+      if (monthly_amount != null && Number(monthly_amount) !== Number(plan.monthly_amount)) txUpdates.amount = Number(monthly_amount);
+      if (name) txUpdates.merchant = name;
+      if (Object.keys(txUpdates).length > 0) {
+        txUpdates.updated_at = new Date().toISOString();
+        const { error: txError } = await supabaseAdmin
+          .from('card_transactions')
+          .update(txUpdates)
+          .eq('installment_plan_id', id)
+          .eq('installment_status', 'pending');
+        if (txError) throw txError;
+      }
     }
 
     res.json({ success: true, plan: updatedPlan });

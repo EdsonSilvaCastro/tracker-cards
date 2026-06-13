@@ -137,7 +137,7 @@ export default function MonthlyPayments() {
   const [confirmCancel, setConfirmCancel] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [editPlan, setEditPlan] = useState(null);
-  const [editForm, setEditForm] = useState({ name: '', card_id: '', monthly_amount: '' });
+  const [editForm, setEditForm] = useState({ name: '', card_id: '', monthly_amount: '', start_month: '', start_year: '' });
   const [editSubmitting, setEditSubmitting] = useState(false);
   const [toggling, setToggling] = useState(null); // 'planId-year-month'
 
@@ -228,7 +228,7 @@ export default function MonthlyPayments() {
 
   // ── Edit plan ────────────────────────────────────────────────────────────────
   function openEdit(plan) {
-    setEditForm({ name: plan.name, card_id: plan.card_id, monthly_amount: String(plan.monthly_amount) });
+    setEditForm({ name: plan.name, card_id: plan.card_id, monthly_amount: String(plan.monthly_amount), start_month: String(plan.start_month), start_year: String(plan.start_year) });
     setEditPlan(plan);
   }
 
@@ -241,6 +241,8 @@ export default function MonthlyPayments() {
         name: editForm.name,
         card_id: editForm.card_id,
         monthly_amount: Number(editForm.monthly_amount),
+        start_month: Number(editForm.start_month),
+        start_year: Number(editForm.start_year),
       });
       showToast('Plan actualizado');
       setEditPlan(null);
@@ -583,6 +585,28 @@ export default function MonthlyPayments() {
                   />
                 </div>
                 <p className="text-xs text-gray-500 mt-1">Solo se actualizarán las cuotas pendientes</p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Mes de inicio</label>
+                <div className="grid grid-cols-2 gap-4">
+                  <select
+                    className="w-full px-3 py-2 border-2 border-black bg-white shadow-[3px_3px_0_0_#000] focus:outline-none focus:shadow-[1px_1px_0_0_#000] transition-all"
+                    value={editForm.start_month}
+                    onChange={e => setEditForm(f => ({ ...f, start_month: e.target.value }))}
+                  >
+                    {MONTHS_ES.map((m, i) => (
+                      <option key={i} value={i + 1}>{m}</option>
+                    ))}
+                  </select>
+                  <select
+                    className="w-full px-3 py-2 border-2 border-black bg-white shadow-[3px_3px_0_0_#000] focus:outline-none focus:shadow-[1px_1px_0_0_#000] transition-all"
+                    value={editForm.start_year}
+                    onChange={e => setEditForm(f => ({ ...f, start_year: e.target.value }))}
+                  >
+                    {YEARS.map(y => <option key={y} value={y}>{y}</option>)}
+                  </select>
+                </div>
+                <p className="text-xs text-gray-500 mt-1">Cambiarlo regenera todas las cuotas del plan</p>
               </div>
               <div className="flex gap-3 pt-2">
                 <Button type="button" variant="outline" className="flex-1" onClick={() => setEditPlan(null)}>
