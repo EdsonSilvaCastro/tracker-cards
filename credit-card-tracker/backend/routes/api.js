@@ -11,6 +11,7 @@ import * as analyticsController from '../controllers/analyticsController.js';
 import * as cardTransactionsController from '../controllers/cardTransactionsController.js';
 import * as telegramController from '../controllers/telegramController.js';
 import * as installmentController from '../controllers/installmentController.js';
+import * as savingsAllocationsController from '../controllers/savingsAllocationsController.js';
 
 const router = express.Router();
 
@@ -91,6 +92,11 @@ router.post('/installment-plans', installmentController.createInstallmentPlan);
 router.put('/installment-plans/:id', installmentController.updateInstallmentPlan);
 router.patch('/installment-plans/:id/toggle-installment', installmentController.toggleInstallment);
 router.delete('/installment-plans/:id', installmentController.cancelInstallmentPlan);
+
+// ==================== Savings Allocations Routes ====================
+router.get('/savings-allocations/:month/:year', savingsAllocationsController.getAllocations);
+router.post('/savings-allocations', savingsAllocationsController.upsertAllocation);
+router.delete('/savings-allocations/:id', savingsAllocationsController.deleteAllocation);
 
 // ==================== Card Transactions Routes ====================
 // Nota: autocomplete ANTES de /:id para que Express no lo capture como param

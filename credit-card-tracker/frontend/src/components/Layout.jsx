@@ -169,7 +169,7 @@ export default function Layout() {
         </div>
 
         {/* Page content */}
-        <main className="p-4 lg:p-8">
+        <main className="p-4 pb-32 min-h-[calc(100vh-3rem)] lg:min-h-0 lg:p-8 lg:pb-8">
           <Outlet />
         </main>
       </div>

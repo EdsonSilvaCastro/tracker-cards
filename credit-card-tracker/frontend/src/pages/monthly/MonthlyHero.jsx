@@ -3,12 +3,13 @@ import React from 'react';
 export default function MonthlyHero({
   totalBudget,
   totalSpentOnCards,
+  totalSavingsCommitment = 0,
   currentDayOfMonth,
   daysInMonth,
   remainingDays,
   formatCurrency,
 }) {
-  const available = totalBudget - totalSpentOnCards;
+  const available = totalBudget - totalSpentOnCards - totalSavingsCommitment;
   const dailyBudget = remainingDays > 0 ? available / remainingDays : 0;
   const progressPct = totalBudget > 0 ? Math.min((totalSpentOnCards / totalBudget) * 100, 100) : 0;
 
@@ -30,6 +31,11 @@ export default function MonthlyHero({
           )}
         </div>
       </div>
+      {totalSavingsCommitment > 0 && (
+        <p className="text-xs font-bold text-black/60 mt-1">
+          Ahorro reservado: {formatCurrency(totalSavingsCommitment)}
+        </p>
+      )}
       <div className="mt-4 h-3 bg-black/20 border border-black overflow-hidden">
         <div
           className={`h-full transition-all duration-500 ${

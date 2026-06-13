@@ -105,4 +105,16 @@ export const cardTransactionsApi = {
   merchantAutocomplete: (q) => api.get('/card-transactions/merchants/autocomplete', { params: { q } }),
 };
 
+// ==================== Savings API ====================
+export const savingsApi = {
+  getAll: () => api.get('/savings'),
+};
+
+// ==================== Savings Allocations API ====================
+export const savingsAllocationsApi = {
+  getByMonth: (month, year) => api.get(`/savings-allocations/${month}/${year}`),
+  upsert: (data) => api.post('/savings-allocations', data),
+  delete: (id) => api.delete(`/savings-allocations/${id}`),
+};
+
 export default api;

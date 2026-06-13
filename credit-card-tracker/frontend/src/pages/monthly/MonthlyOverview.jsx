@@ -1,15 +1,18 @@
 import { useState, useEffect, useRef } from 'react';
 import { ChevronLeft, ChevronRight, Copy, Settings, AlertCircle } from 'lucide-react';
 import api from '../../lib/api';
+import { savingsApi, savingsAllocationsApi } from '../../lib/api';
 
 import MonthlyHero from './MonthlyHero';
 import MonthlyStats from './MonthlyStats';
 import CardsGrid from './CardsGrid';
 import CategoryAccordion from './CategoryAccordion';
+import SavingsSection from './SavingsSection';
 import EditCardBalanceModal from './modals/EditCardBalanceModal';
 import ExpenseFormModal from './modals/ExpenseFormModal';
 import SetBudgetModal from './modals/SetBudgetModal';
 import CopyBudgetModal from './modals/CopyBudgetModal';
+import SavingsAllocationModal from './modals/SavingsAllocationModal';
 
 const MONTHS_EN = [
   'January', 'February', 'March', 'April', 'May', 'June',
@@ -35,6 +38,8 @@ export default function MonthlyOverview() {
   const [spendingAnalysis, setSpendingAnalysis] = useState(null);
   const [allCards, setAllCards] = useState([]); // all user's credit cards for paid_with selector
   const [installmentPlans, setInstallmentPlans] = useState([]);
+  const [savingsGoals, setSavingsGoals] = useState([]);
+  const [savingsAllocations, setSavingsAllocations] = useState([]);
 
   // UI state
   const [loading, setLoading] = useState(true);
@@ -81,6 +86,10 @@ export default function MonthlyOverview() {
   const [copySectionKey, setCopySectionKey] = useState(null);
   const [copySectionForm, setCopySectionForm] = useState({ from_month: '', from_year: '', include_actual: false });
 
+  // Savings allocation modal
+  const [showSavingsModal, setShowSavingsModal] = useState(false);
+  const [editingAllocation, setEditingAllocation] = useState(null);
+
   // Derived values
   const currentMonth = currentDate.getMonth() + 1;
   const currentYear = currentDate.getFullYear();
@@ -96,6 +105,7 @@ export default function MonthlyOverview() {
 
   const cards = cardsData?.cards || [];
   const budgetSections = budgetData?.sections || [];
+  const totalSavingsCommitment = savingsAllocations.reduce((s, a) => s + Number(a.amount), 0);
   const totalBudget = budgetData?.overview?.total_budget || 0;
   const totalSpentOnCards = spendingAnalysis?.total_spent_on_cards ?? (cardsData?.totals?.total_to_pay || 0);
   const totalInPlan = spendingAnalysis?.total_in_plan ?? 0;
@@ -133,6 +143,8 @@ export default function MonthlyOverview() {
       api.get('/cards'),
       api.get(`/budget/${currentMonth}/${currentYear}/spending-analysis`),
       api.get('/installment-plans'),
+      savingsApi.getAll(),
+      savingsAllocationsApi.getByMonth(currentMonth, currentYear),
     ]);
 
     if (results[0].status === 'fulfilled') setCardsData(results[0].value.data.data);
@@ -140,6 +152,8 @@ export default function MonthlyOverview() {
     if (results[2].status === 'fulfilled') setAllCards(results[2].value.data.data || []);
     if (results[3].status === 'fulfilled') setSpendingAnalysis(results[3].value.data.data);
     if (results[4].status === 'fulfilled') setInstallmentPlans(results[4].value.data.data || []);
+    if (results[5].status === 'fulfilled') setSavingsGoals(results[5].value.data.data || []);
+    if (results[6].status === 'fulfilled') setSavingsAllocations(results[6].value.data.data || []);
 
     if (results[0].status === 'rejected' || results[1].status === 'rejected') {
       setError('Failed to load data');
@@ -579,10 +593,26 @@ export default function MonthlyOverview() {
     );
     return installmentPlans.filter(plan => {
       if (plan.status !== 'active') return false;
-      const hasTxThisMonth = plan.transactions?.some(
-        t => t.billing_year === currentYear && t.billing_month === currentMonth && t.installment_status !== 'cancelled'
+
+      // Use date-range math (same as MonthlyPayments getCellState) so plans without
+      // a card_transactions row still surface as suggestions.
+      const t = (plan.start_month - 1) + (plan.total_months - 1);
+      const endYear = plan.start_year + Math.floor(t / 12);
+      const endMonth = (t % 12) + 1;
+      const afterStart =
+        currentYear > plan.start_year ||
+        (currentYear === plan.start_year && currentMonth >= plan.start_month);
+      const beforeEnd =
+        currentYear < endYear ||
+        (currentYear === endYear && currentMonth <= endMonth);
+      if (!afterStart || !beforeEnd) return false;
+
+      // If a transaction record exists for this month and it's cancelled, skip it.
+      const tx = plan.transactions?.find(
+        t => t.billing_year === currentYear && t.billing_month === currentMonth
       );
-      if (!hasTxThisMonth) return false;
+      if (tx?.installment_status === 'cancelled') return false;
+
       return !existingNames.has(plan.name.toLowerCase().trim());
     });
   })();
@@ -607,6 +637,16 @@ export default function MonthlyOverview() {
       console.error('Error importing installment plans:', err);
     } finally {
       setSaving(false);
+    }
+  };
+
+  // ============ SAVINGS ALLOCATIONS ============
+  const handleDeleteAllocation = async (id) => {
+    try {
+      await savingsAllocationsApi.delete(id);
+      await fetchAllData();
+    } catch (err) {
+      console.error('Error deleting savings allocation:', err);
     }
   };
 
@@ -700,6 +740,7 @@ export default function MonthlyOverview() {
       <MonthlyHero
         totalBudget={totalBudget}
         totalSpentOnCards={totalSpentOnCards}
+        totalSavingsCommitment={totalSavingsCommitment}
         currentDayOfMonth={currentDayOfMonth}
         daysInMonth={daysInMonth}
         remainingDays={remainingDays}
@@ -714,6 +755,17 @@ export default function MonthlyOverview() {
         totalBudget={totalBudget}
         currentDayOfMonth={currentDayOfMonth}
         daysInMonth={daysInMonth}
+        formatCurrency={formatCurrency}
+      />
+
+      {/* ── Savings ── */}
+      <SavingsSection
+        allocations={savingsAllocations}
+        savingsGoals={savingsGoals}
+        totalCommitment={totalSavingsCommitment}
+        onAdd={() => { setEditingAllocation(null); setShowSavingsModal(true); }}
+        onEdit={(a) => { setEditingAllocation(a); setShowSavingsModal(true); }}
+        onDelete={handleDeleteAllocation}
         formatCurrency={formatCurrency}
       />
 
@@ -836,6 +888,23 @@ export default function MonthlyOverview() {
         currentMonthName={currentMonthName}
         currentYear={currentYear}
       />
+
+      {/* Savings allocation */}
+      {showSavingsModal && (
+        <SavingsAllocationModal
+          allocation={editingAllocation}
+          savingsGoals={savingsGoals.filter(g => g.status === 'active')}
+          existingGoalIds={savingsAllocations.map(a => a.savings_goal_id)}
+          month={currentMonth}
+          year={currentYear}
+          onSave={async (data) => {
+            await savingsAllocationsApi.upsert(data);
+            await fetchAllData();
+            setShowSavingsModal(false);
+          }}
+          onClose={() => setShowSavingsModal(false)}
+        />
+      )}
     </div>
   );
 }

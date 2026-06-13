@@ -335,23 +335,29 @@ export default function MonthlyPayments() {
             <div>
               <label className="block text-sm font-medium mb-2">Tarjeta</label>
               <div className="flex flex-wrap gap-2">
-                {cards.filter(c => c.status !== 'inactive').map(c => {
-                  const active = form.card_id === c.id;
-                  return (
-                    <button
-                      key={c.id}
-                      type="button"
-                      onClick={() => setField('card_id', c.id)}
-                      className={`px-3 py-1.5 text-sm font-medium border-2 border-black transition-all cursor-pointer ${
-                        active
-                          ? 'bg-(--color-primary) font-bold shadow-[2px_2px_0_0_#000]'
-                          : 'bg-white hover:bg-(--color-accent)'
-                      }`}
-                    >
-                      {c.card_name || c.bank}
-                    </button>
-                  );
-                })}
+                {cards.filter(c => c.status !== 'inactive').length === 0 ? (
+                  <p className="text-sm text-gray-500 border-2 border-dashed border-gray-300 px-3 py-1.5">
+                    Sin tarjetas registradas
+                  </p>
+                ) : (
+                  cards.filter(c => c.status !== 'inactive').map(c => {
+                    const active = form.card_id === c.id;
+                    return (
+                      <button
+                        key={c.id}
+                        type="button"
+                        onClick={() => setField('card_id', c.id)}
+                        className={`px-3 py-1.5 text-sm font-medium border-2 border-black transition-all cursor-pointer ${
+                          active
+                            ? 'bg-(--color-primary) font-bold shadow-[2px_2px_0_0_#000]'
+                            : 'bg-white hover:bg-(--color-accent)'
+                        }`}
+                      >
+                        {c.card_name || c.bank}
+                      </button>
+                    );
+                  })
+                )}
               </div>
             </div>
 
@@ -540,21 +546,27 @@ export default function MonthlyPayments() {
               <div>
                 <label className="block text-sm font-medium mb-2">Tarjeta</label>
                 <div className="flex flex-wrap gap-2">
-                  {cards.filter(c => c.status !== 'inactive').map(c => {
-                    const active = editForm.card_id === c.id;
-                    return (
-                      <button
-                        key={c.id}
-                        type="button"
-                        onClick={() => setEditForm(f => ({ ...f, card_id: c.id }))}
-                        className={`px-3 py-1.5 text-sm font-medium border-2 border-black transition-all cursor-pointer ${
-                          active ? 'bg-(--color-primary) font-bold shadow-[2px_2px_0_0_#000]' : 'bg-white hover:bg-(--color-accent)'
-                        }`}
-                      >
-                        {c.card_name || c.bank}
-                      </button>
-                    );
-                  })}
+                  {cards.filter(c => c.status !== 'inactive').length === 0 ? (
+                    <p className="text-sm text-gray-500 border-2 border-dashed border-gray-300 px-3 py-1.5">
+                      Sin tarjetas registradas
+                    </p>
+                  ) : (
+                    cards.filter(c => c.status !== 'inactive').map(c => {
+                      const active = editForm.card_id === c.id;
+                      return (
+                        <button
+                          key={c.id}
+                          type="button"
+                          onClick={() => setEditForm(f => ({ ...f, card_id: c.id }))}
+                          className={`px-3 py-1.5 text-sm font-medium border-2 border-black transition-all cursor-pointer ${
+                            active ? 'bg-(--color-primary) font-bold shadow-[2px_2px_0_0_#000]' : 'bg-white hover:bg-(--color-accent)'
+                          }`}
+                        >
+                          {c.card_name || c.bank}
+                        </button>
+                      );
+                    })
+                  )}
                 </div>
               </div>
               <div>
