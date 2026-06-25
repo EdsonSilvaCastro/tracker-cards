@@ -108,8 +108,30 @@ export default function MonthlyOverview() {
   const totalSavingsCommitment = savingsAllocations.reduce((s, a) => s + Number(a.amount), 0);
   const totalBudget = budgetData?.overview?.total_budget || 0;
   const totalSpentOnCards = spendingAnalysis?.total_spent_on_cards ?? (cardsData?.totals?.total_to_pay || 0);
-  const totalInPlan = spendingAnalysis?.total_in_plan ?? 0;
   const totalOutOfPlan = spendingAnalysis?.total_out_of_plan ?? 0;
+
+  // Hero "Te queda libre" model — prefer the backend computation; degrade
+  // gracefully (without installment data) if the analysis endpoint failed.
+  const heroData = spendingAnalysis?.hero ?? (() => {
+    const presupuestado = budgetData?.overview?.total_budgeted || 0;
+    const obligaciones = Math.max(totalSpentOnCards, presupuestado);
+    return {
+      ingreso_mensual: totalBudget,
+      ahorro_reservado: totalSavingsCommitment,
+      gastado_real: totalSpentOnCards,
+      falta_por_pagar: Math.max(0, obligaciones - totalSpentOnCards),
+      committed_installments: 0,
+      comprometido_tarjetas: totalSpentOnCards,
+      presupuestado_total: presupuestado,
+      obligaciones,
+      disponible_hoy: totalBudget - totalSavingsCommitment - totalSpentOnCards,
+      disponible_comprometido: totalBudget - totalSavingsCommitment - totalSpentOnCards,
+      disponible_plan: totalBudget - totalSavingsCommitment - obligaciones,
+      colchon_planeado: totalBudget - totalSavingsCommitment - presupuestado,
+      plan_exceeded: totalSpentOnCards > presupuestado,
+      plan_excess: Math.max(0, totalSpentOnCards - presupuestado),
+    };
+  })();
 
   // Reset expand state when month changes
   useEffect(() => {
@@ -738,9 +760,7 @@ export default function MonthlyOverview() {
 
       {/* ── Hero ── */}
       <MonthlyHero
-        totalBudget={totalBudget}
-        totalSpentOnCards={totalSpentOnCards}
-        totalSavingsCommitment={totalSavingsCommitment}
+        hero={heroData}
         currentDayOfMonth={currentDayOfMonth}
         daysInMonth={daysInMonth}
         remainingDays={remainingDays}
@@ -750,7 +770,7 @@ export default function MonthlyOverview() {
       {/* ── Stats ── */}
       <MonthlyStats
         totalSpentOnCards={totalSpentOnCards}
-        totalInPlan={totalInPlan}
+        committedInCycle={heroData.comprometido_tarjetas}
         totalOutOfPlan={totalOutOfPlan}
         totalBudget={totalBudget}
         currentDayOfMonth={currentDayOfMonth}

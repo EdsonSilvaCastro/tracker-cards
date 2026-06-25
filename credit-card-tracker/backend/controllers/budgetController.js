@@ -398,7 +398,7 @@ const getSpendingAnalysis = async (req, res) => {
     // Get budget expenses for the month
     const { data: expenses, error: expensesError } = await supabaseAdmin
       .from('monthly_budget_expenses')
-      .select('actual_spent, paid_with')
+      .select('actual_spent, budgeted_amount, paid_with')
       .eq('user_id', req.user.id)
       .eq('month', monthNum)
       .eq('year', yearNum);
@@ -436,13 +436,95 @@ const getSpendingAnalysis = async (req, res) => {
       };
     });
 
+    // ── Hero "Disponible este mes" — three honest availables ──────────────
+    // Model = statements + installments. card_transactions is a sparse ledger
+    // in this app (statement totals live in monthly_card_balances), so:
+    //   gastado_real   = what's already billed on cards (statement totals)
+    //   comprometido   = billed + future installments of the cycle not yet billed
+    //   presupuestado  = full budgeted plan
+    // disponible_plan uses MAX(comprometido, presupuestado) so an over-budget
+    // category can't make the conservative floor look artificially good.
+
+    // ingreso del mes
+    const { data: budgetRow } = await supabaseAdmin
+      .from('monthly_budgets')
+      .select('total_budget')
+      .eq('user_id', req.user.id)
+      .eq('month', monthNum)
+      .eq('year', yearNum)
+      .maybeSingle();
+    const ingreso_mensual = parseFloat(budgetRow?.total_budget || 0);
+
+    // ahorro ya reservado este mes
+    const { data: allocations } = await supabaseAdmin
+      .from('monthly_savings_allocations')
+      .select('amount')
+      .eq('user_id', req.user.id)
+      .eq('month', monthNum)
+      .eq('year', yearNum);
+    const ahorro_reservado = (allocations || []).reduce(
+      (sum, a) => sum + parseFloat(a.amount || 0), 0
+    );
+
+    // mensualidades pendientes del ciclo (compromisos futuros aún no facturados)
+    const { data: pendingInstallments } = await supabaseAdmin
+      .from('card_transactions')
+      .select('amount')
+      .eq('user_id', req.user.id)
+      .eq('billing_month', monthNum)
+      .eq('billing_year', yearNum)
+      .eq('installment_status', 'pending');
+    const committed_installments = (pendingInstallments || []).reduce(
+      (sum, t) => sum + parseFloat(t.amount || 0), 0
+    );
+
+    const presupuestado_total = (expenses || []).reduce(
+      (sum, e) => sum + parseFloat(e.budgeted_amount || 0), 0
+    );
+
+    const gastado_real = total_spent_on_cards;
+    const comprometido_tarjetas = gastado_real + committed_installments;
+
+    const disponible_hoy = ingreso_mensual - ahorro_reservado - gastado_real;
+    const disponible_comprometido = ingreso_mensual - ahorro_reservado - comprometido_tarjetas;
+    const plan_exceeded = comprometido_tarjetas > presupuestado_total;
+
+    // "Te queda libre" model — reserve the FULL plan (or the committed amount if
+    // you already blew past it), so paying a budgeted item never moves the
+    // available figure; only unplanned overspend does. The four buckets below
+    // always sum to ingreso_mensual.
+    const obligaciones = Math.max(comprometido_tarjetas, presupuestado_total);
+    const falta_por_pagar = Math.max(0, obligaciones - gastado_real);
+    const disponible_plan = ingreso_mensual - ahorro_reservado - obligaciones; // = libre
+    const colchon_planeado = ingreso_mensual - ahorro_reservado - presupuestado_total;
+
+    const hero = {
+      // components / buckets (ahorro + pagado + falta + libre = ingreso)
+      ingreso_mensual,
+      ahorro_reservado,
+      gastado_real,            // ya pagado (facturado)
+      falta_por_pagar,         // obligaciones restantes (plan/comprometido aún sin pagar)
+      committed_installments,  // de lo que falta, cuánto son mensualidades del ciclo
+      comprometido_tarjetas,
+      presupuestado_total,
+      obligaciones,
+      // availables
+      disponible_hoy,
+      disponible_comprometido,
+      disponible_plan,         // "te queda libre" — el número héroe
+      colchon_planeado,        // libre que dejaba el plan (antes de excederte)
+      plan_exceeded,
+      plan_excess: plan_exceeded ? comprometido_tarjetas - presupuestado_total : 0,
+    };
+
     res.json({
       success: true,
       data: {
         total_spent_on_cards,
         total_in_plan,
         total_out_of_plan,
-        cards_breakdown
+        cards_breakdown,
+        hero
       }
     });
   } catch (error) {

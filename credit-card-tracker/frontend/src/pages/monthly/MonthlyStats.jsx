@@ -2,38 +2,39 @@ import React from 'react';
 
 export default function MonthlyStats({
   totalSpentOnCards,
-  totalInPlan,
+  committedInCycle,
   totalOutOfPlan,
   totalBudget,
   currentDayOfMonth,
   daysInMonth,
   formatCurrency,
 }) {
+  // Holgura = qué tan adelantado/pasado vas vs el ritmo ideal de gasto.
+  // Positiva = vas adelantado (has gastado menos que el % de mes transcurrido).
+  // Negativa = vas pasado. El signo del número coincide con el color.
   const ritmoIdeal = daysInMonth > 0 ? currentDayOfMonth / daysInMonth : 0;
   const ritmoReal = totalBudget > 0 ? totalSpentOnCards / totalBudget : 0;
-  const desviacion = (ritmoReal - ritmoIdeal) * 100;
+  const holgura = (ritmoIdeal - ritmoReal) * 100;
 
-  const ritmoColor =
-    desviacion > 5 ? 'text-red-600' : desviacion > 0 ? 'text-amber-500' : 'text-green-600';
-  const ritmoBg =
-    desviacion > 5 ? 'bg-red-50 border-red-100' : desviacion > 0 ? 'bg-amber-50 border-amber-100' : 'bg-green-50 border-green-100';
-  const ritmoLabel =
-    desviacion > 0 ? `+${desviacion.toFixed(1)}%` : `${desviacion.toFixed(1)}%`;
+  const holguraBg =
+    holgura <= -5 ? 'bg-red-400' : holgura < 0 ? 'bg-orange-300' : 'bg-green-400';
+  const holguraLabel = `${holgura >= 0 ? '+' : ''}${holgura.toFixed(1)}%`;
+  const holguraNote = holgura >= 0 ? 'vas adelantado' : 'vas pasado';
 
   return (
     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-      {/* Gastado real */}
+      {/* Cargado a tarjeta */}
       <div className="bg-white border-2 border-black shadow-[4px_4px_0_0_#000] p-4">
-        <p className="text-xs font-bold text-black/50 uppercase tracking-wide mb-1">Gastado real</p>
+        <p className="text-xs font-bold text-black/50 uppercase tracking-wide mb-1">Cargado a tarjeta</p>
         <p className="text-xl font-black text-black">{formatCurrency(totalSpentOnCards)}</p>
-        <p className="text-xs text-black/40 mt-1">en tarjetas</p>
+        <p className="text-xs text-black/40 mt-1">ya facturado</p>
       </div>
 
-      {/* En plan */}
+      {/* Comprometido en ciclo */}
       <div className="bg-green-400 border-2 border-black shadow-[4px_4px_0_0_#000] p-4">
-        <p className="text-xs font-bold text-black/60 uppercase tracking-wide mb-1">En plan</p>
-        <p className="text-xl font-black text-black">{formatCurrency(totalInPlan)}</p>
-        <p className="text-xs text-black/50 mt-1">gastos asignados</p>
+        <p className="text-xs font-bold text-black/60 uppercase tracking-wide mb-1">Comprometido en ciclo</p>
+        <p className="text-xl font-black text-black">{formatCurrency(committedInCycle)}</p>
+        <p className="text-xs text-black/50 mt-1">incluye mensualidades pendientes del ciclo</p>
       </div>
 
       {/* Fuera de plan — KPI principal */}
@@ -43,13 +44,11 @@ export default function MonthlyStats({
         <p className="text-xs text-black/50 mt-1">sin categorizar</p>
       </div>
 
-      {/* Ritmo */}
-      <div className={`border-2 border-black shadow-[4px_4px_0_0_#000] p-4 ${
-        desviacion > 5 ? 'bg-red-400' : desviacion > 0 ? 'bg-orange-300' : 'bg-green-400'
-      }`}>
-        <p className="text-xs font-bold text-black/60 uppercase tracking-wide mb-1">Ritmo</p>
-        <p className="text-xl font-black text-black">{ritmoLabel}</p>
-        <p className="text-xs text-black/50 mt-1">vs ritmo ideal</p>
+      {/* Holgura */}
+      <div className={`border-2 border-black shadow-[4px_4px_0_0_#000] p-4 ${holguraBg}`}>
+        <p className="text-xs font-bold text-black/60 uppercase tracking-wide mb-1">Holgura</p>
+        <p className="text-xl font-black text-black">{holguraLabel}</p>
+        <p className="text-xs text-black/50 mt-1">{holguraNote}</p>
       </div>
     </div>
   );
