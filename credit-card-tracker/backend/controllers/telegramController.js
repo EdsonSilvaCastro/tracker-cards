@@ -8,6 +8,11 @@ import { supabaseAdmin } from '../config/supabase.js';
 // Estado conversacional en memoria (simple, para uso personal de un solo usuario)
 const conversationState = new Map();
 
+// user_id dueño del bot — acota las consultas a sus propias tarjetas/expenses.
+// Sin esto, supabaseAdmin (service role) traería tarjetas de TODOS los usuarios y el
+// bot podría empatar/guardar contra una tarjeta ajena.
+const OWNER_USER_ID = process.env.TELEGRAM_OWNER_USER_ID;
+
 // ---------------------------------------------------------------------------
 // GET /api/telegram/status  — Diagnóstico del estado del bot
 // ---------------------------------------------------------------------------
@@ -153,18 +158,22 @@ async function processMessage(chatId, text) {
     return;
   }
 
-  // Cargar tarjetas activas y expenses del mes en curso
-  const { data: activeCards } = await supabaseAdmin
+  // Cargar tarjetas activas y expenses del mes en curso (acotado al dueño del bot)
+  let cardsQuery = supabaseAdmin
     .from('credit_cards')
     .select('id, card_name, cutoff_day')
     .eq('is_active', true);
+  if (OWNER_USER_ID) cardsQuery = cardsQuery.eq('user_id', OWNER_USER_ID);
+  const { data: activeCards } = await cardsQuery;
 
   const today = new Date();
-  const { data: currentExpenses } = await supabaseAdmin
+  let expensesQuery = supabaseAdmin
     .from('monthly_budget_expenses')
     .select('id, expense_name, section, budgeted_amount, actual_spent, status')
     .eq('month', today.getMonth() + 1)
     .eq('year', today.getFullYear());
+  if (OWNER_USER_ID) expensesQuery = expensesQuery.eq('user_id', OWNER_USER_ID);
+  const { data: currentExpenses } = await expensesQuery;
 
   // Si hay estado previo por clarificación, fusionar mensajes
   const messageToParse = prev
