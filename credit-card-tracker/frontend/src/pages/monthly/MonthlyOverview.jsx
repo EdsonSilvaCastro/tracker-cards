@@ -111,21 +111,22 @@ export default function MonthlyOverview() {
   const totalOutOfPlan = spendingAnalysis?.total_out_of_plan ?? 0;
 
   // Hero "Te queda libre" model — prefer the backend computation; degrade
-  // gracefully (without installment data) if the analysis endpoint failed.
+  // gracefully from card balances if the analysis endpoint failed.
   const heroData = spendingAnalysis?.hero ?? (() => {
     const presupuestado = budgetData?.overview?.total_budgeted || 0;
     const obligaciones = Math.max(totalSpentOnCards, presupuestado);
+    const yaPagado = cards.reduce(
+      (s, c) => s + (c.is_paid ? Number(c.amount_to_pay || 0) : 0), 0
+    );
     return {
       ingreso_mensual: totalBudget,
       ahorro_reservado: totalSavingsCommitment,
-      gastado_real: totalSpentOnCards,
-      falta_por_pagar: Math.max(0, obligaciones - totalSpentOnCards),
-      committed_installments: 0,
+      ya_pagado: yaPagado,
+      falta_por_pagar: Math.max(0, obligaciones - yaPagado),
+      por_pagar_tarjetas: Math.max(0, totalSpentOnCards - yaPagado),
       comprometido_tarjetas: totalSpentOnCards,
       presupuestado_total: presupuestado,
       obligaciones,
-      disponible_hoy: totalBudget - totalSavingsCommitment - totalSpentOnCards,
-      disponible_comprometido: totalBudget - totalSavingsCommitment - totalSpentOnCards,
       disponible_plan: totalBudget - totalSavingsCommitment - obligaciones,
       colchon_planeado: totalBudget - totalSavingsCommitment - presupuestado,
       plan_exceeded: totalSpentOnCards > presupuestado,
@@ -770,7 +771,7 @@ export default function MonthlyOverview() {
       {/* ── Stats ── */}
       <MonthlyStats
         totalSpentOnCards={totalSpentOnCards}
-        committedInCycle={heroData.comprometido_tarjetas}
+        porPagar={heroData.por_pagar_tarjetas}
         totalOutOfPlan={totalOutOfPlan}
         totalBudget={totalBudget}
         currentDayOfMonth={currentDayOfMonth}

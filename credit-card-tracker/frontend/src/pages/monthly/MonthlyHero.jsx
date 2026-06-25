@@ -44,9 +44,8 @@ export default function MonthlyHero({
   const {
     ingreso_mensual: ingreso = 0,
     ahorro_reservado: ahorro = 0,
-    gastado_real: pagado = 0,
+    ya_pagado: pagado = 0,
     falta_por_pagar: falta = 0,
-    committed_installments: installments = 0,
     presupuestado_total: plan = 0,
     disponible_plan: libre = 0,
     colchon_planeado = 0,
@@ -152,7 +151,6 @@ export default function MonthlyHero({
       {falta > 0 && (
         <p className="text-xs font-bold text-black/70 mt-1">
           Aún por pagar este mes: {formatCurrency(falta)}
-          {installments > 0 && ` (incl. ${formatCurrency(installments)} en mensualidades)`}
         </p>
       )}
     </div>

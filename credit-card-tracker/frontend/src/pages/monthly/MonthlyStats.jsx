@@ -2,7 +2,7 @@ import React from 'react';
 
 export default function MonthlyStats({
   totalSpentOnCards,
-  committedInCycle,
+  porPagar,
   totalOutOfPlan,
   totalBudget,
   currentDayOfMonth,
@@ -30,11 +30,11 @@ export default function MonthlyStats({
         <p className="text-xs text-black/40 mt-1">ya facturado</p>
       </div>
 
-      {/* Comprometido en ciclo */}
-      <div className="bg-green-400 border-2 border-black shadow-[4px_4px_0_0_#000] p-4">
-        <p className="text-xs font-bold text-black/60 uppercase tracking-wide mb-1">Comprometido en ciclo</p>
-        <p className="text-xl font-black text-black">{formatCurrency(committedInCycle)}</p>
-        <p className="text-xs text-black/50 mt-1">incluye mensualidades pendientes del ciclo</p>
+      {/* Por pagar */}
+      <div className="bg-yellow-300 border-2 border-black shadow-[4px_4px_0_0_#000] p-4">
+        <p className="text-xs font-bold text-black/60 uppercase tracking-wide mb-1">Por pagar</p>
+        <p className="text-xl font-black text-black">{formatCurrency(porPagar)}</p>
+        <p className="text-xs text-black/50 mt-1">tarjetas sin marcar pagadas</p>
       </div>
 
       {/* Fuera de plan — KPI principal */}
