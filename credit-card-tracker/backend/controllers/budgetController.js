@@ -399,7 +399,7 @@ const getSpendingAnalysis = async (req, res) => {
     // Get budget expenses for the month
     const { data: expenses, error: expensesError } = await supabaseAdmin
       .from('monthly_budget_expenses')
-      .select('actual_spent, budgeted_amount, paid_with')
+      .select('actual_spent, budgeted_amount, paid_with, status')
       .eq('user_id', req.user.id)
       .eq('month', monthNum)
       .eq('year', yearNum);
@@ -475,10 +475,24 @@ const getSpendingAnalysis = async (req, res) => {
     );
 
     const comprometido_tarjetas = total_spent_on_cards; // todos los saldos del ciclo
-    const ya_pagado = userBalances.reduce(
+    // "Por pagar" metric = saldos de tarjeta aún sin marcar pagadas (nivel tarjeta)
+    const ya_pagado_tarjetas = userBalances.reduce(
       (sum, b) => sum + (b.is_paid ? parseFloat(b.amount_to_pay || 0) : 0), 0
     );
-    const por_pagar_tarjetas = Math.max(0, comprometido_tarjetas - ya_pagado);
+    const por_pagar_tarjetas = Math.max(0, comprometido_tarjetas - ya_pagado_tarjetas);
+
+    // Hero buckets use EXPENSE-level status, not card is_paid: a card can be
+    // "por pagar" while most of its budgeted items are already marked paid.
+    //   ya_pagado = budgeted de gastos marcados paid/partial
+    //   falta_por_pagar = lo que falta de las obligaciones (gastos pending +
+    //                     cualquier sobregiro de tarjeta por encima del plan)
+    const ya_pagado = (expenses || []).reduce(
+      (sum, e) =>
+        sum + (e.status === 'paid' || e.status === 'partial'
+          ? parseFloat(e.budgeted_amount || 0)
+          : 0),
+      0
+    );
 
     const obligaciones = Math.max(comprometido_tarjetas, presupuestado_total);
     const falta_por_pagar = Math.max(0, obligaciones - ya_pagado);
@@ -490,8 +504,8 @@ const getSpendingAnalysis = async (req, res) => {
       // components / buckets (ahorro + ya_pagado + falta_por_pagar + libre = ingreso)
       ingreso_mensual,
       ahorro_reservado,
-      ya_pagado,               // tarjetas marcadas pagadas (is_paid)
-      falta_por_pagar,         // obligaciones restantes (sin pagar + resto del plan)
+      ya_pagado,               // gastos marcados paid/partial (budgeted)
+      falta_por_pagar,         // gastos pendientes + sobregiro de tarjeta vs plan
       por_pagar_tarjetas,      // tarjetas sin marcar pagadas
       comprometido_tarjetas,   // todos los saldos del ciclo (= cargado a tarjeta)
       presupuestado_total,

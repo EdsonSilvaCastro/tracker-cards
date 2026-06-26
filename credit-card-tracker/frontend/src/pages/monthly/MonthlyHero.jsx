@@ -95,7 +95,7 @@ export default function MonthlyHero({
           <div className="absolute z-20 left-0 top-full mt-2 w-72 bg-white border-2 border-black shadow-[4px_4px_0_0_#000] p-3 text-sm font-bold">
             <BreakdownRow label="Ingreso del mes" value={ingreso} formatCurrency={formatCurrency} />
             <BreakdownRow label="Ahorro reservado" value={-ahorro} formatCurrency={formatCurrency} />
-            <BreakdownRow label="Ya pagado en tarjetas" value={-pagado} formatCurrency={formatCurrency} />
+            <BreakdownRow label="Ya pagado" value={-pagado} formatCurrency={formatCurrency} />
             <BreakdownRow label="Falta por pagar" value={-falta} formatCurrency={formatCurrency} />
             <div className="border-t-2 border-black my-1.5" />
             <BreakdownRow label="Te queda libre" value={libre} formatCurrency={formatCurrency} bold />
