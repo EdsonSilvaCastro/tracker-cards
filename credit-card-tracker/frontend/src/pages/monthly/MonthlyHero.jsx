@@ -15,12 +15,12 @@ function BreakdownRow({ label, value, formatCurrency, bold }) {
 }
 
 // Small labelled swatch for the bucket legend
-function Swatch({ swatchClass, hatch, label, value, formatCurrency }) {
+function Swatch({ swatchClass, swatchStyle, label, value, formatCurrency }) {
   return (
     <div className="flex items-center gap-1.5 min-w-0">
       <span
         className={`inline-block h-3 w-3 border border-black flex-shrink-0 ${swatchClass || ''}`}
-        style={hatch ? { backgroundImage: HATCH } : undefined}
+        style={swatchStyle}
       />
       <span className="truncate">
         <span className="text-black/60">{label}</span>{' '}
@@ -30,9 +30,12 @@ function Swatch({ swatchClass, hatch, label, value, formatCurrency }) {
   );
 }
 
-// Diagonal hatch used for the "falta por pagar" segment (pending obligations)
+// Orange hatch = "falta por pagar" (real card debt); light gray hatch =
+// "planeado aún no facturado" (budgeted but not yet billed to a card).
 const HATCH =
   'repeating-linear-gradient(45deg, #fb923c 0, #fb923c 5px, #1a1a1a 5px, #1a1a1a 7px)';
+const HATCH_LIGHT =
+  'repeating-linear-gradient(45deg, #cbd5e1 0, #cbd5e1 5px, #ffffff 5px, #ffffff 7px)';
 
 export default function MonthlyHero({
   hero,
@@ -46,6 +49,7 @@ export default function MonthlyHero({
     ahorro_reservado: ahorro = 0,
     ya_pagado: pagado = 0,
     falta_por_pagar: falta = 0,
+    planeado_no_facturado: planeado = 0,
     presupuestado_total: plan = 0,
     disponible_plan: libre = 0,
     colchon_planeado = 0,
@@ -97,6 +101,9 @@ export default function MonthlyHero({
             <BreakdownRow label="Ahorro reservado" value={-ahorro} formatCurrency={formatCurrency} />
             <BreakdownRow label="Ya pagado" value={-pagado} formatCurrency={formatCurrency} />
             <BreakdownRow label="Falta por pagar" value={-falta} formatCurrency={formatCurrency} />
+            {planeado > 0 && (
+              <BreakdownRow label="Planeado no facturado" value={-planeado} formatCurrency={formatCurrency} />
+            )}
             <div className="border-t-2 border-black my-1.5" />
             <BreakdownRow label="Te queda libre" value={libre} formatCurrency={formatCurrency} bold />
           </div>
@@ -106,12 +113,13 @@ export default function MonthlyHero({
         después de ahorro y de lo que aún falta por pagar · de {formatCurrency(ingreso)}
       </p>
 
-      {/* Composition bar: ahorro + pagado + falta + libre = ingreso */}
+      {/* Composition bar: ahorro + pagado + falta + planeado + libre = ingreso */}
       <div className="relative mt-5 h-8 border-2 border-black bg-white overflow-hidden">
         <div className="flex h-full w-full">
           <div className="h-full bg-slate-400" style={{ width: w(ahorro) }} />
           <div className="h-full bg-black" style={{ width: w(pagado) }} />
           <div className="h-full" style={{ width: w(falta), backgroundImage: HATCH }} />
+          <div className="h-full" style={{ width: w(planeado), backgroundImage: HATCH_LIGHT }} />
           {/* remaining width is the white track = libre */}
         </div>
         {/* Plan marker */}
@@ -125,10 +133,13 @@ export default function MonthlyHero({
       </div>
 
       {/* Legend */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-3 gap-y-1.5 mt-3 text-xs font-bold">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-x-3 gap-y-1.5 mt-3 text-xs font-bold">
         <Swatch swatchClass="bg-slate-400" label="Ahorro" value={ahorro} formatCurrency={formatCurrency} />
         <Swatch swatchClass="bg-black" label="Ya pagado" value={pagado} formatCurrency={formatCurrency} />
-        <Swatch hatch label="Falta por pagar" value={falta} formatCurrency={formatCurrency} />
+        <Swatch swatchStyle={{ backgroundImage: HATCH }} label="Falta por pagar" value={falta} formatCurrency={formatCurrency} />
+        {planeado > 0 && (
+          <Swatch swatchStyle={{ backgroundImage: HATCH_LIGHT }} label="Planeado" value={planeado} formatCurrency={formatCurrency} />
+        )}
         <Swatch swatchClass="bg-white" label="Libre" value={libre} formatCurrency={formatCurrency} />
       </div>
 

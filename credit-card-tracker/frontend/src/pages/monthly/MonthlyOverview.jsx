@@ -115,17 +115,17 @@ export default function MonthlyOverview() {
   const heroData = spendingAnalysis?.hero ?? (() => {
     const presupuestado = budgetData?.overview?.total_budgeted || 0;
     const obligaciones = Math.max(totalSpentOnCards, presupuestado);
-    const yaPagado = (budgetData?.sections || []).reduce(
-      (s, sec) => s + (sec.expenses || []).reduce(
-        (t, e) => t + (e.status === 'paid' || e.status === 'partial' ? Number(e.budgeted_amount || 0) : 0), 0
-      ), 0
+    const yaPagado = cards.reduce(
+      (s, c) => s + (c.is_paid ? Number(c.amount_to_pay || 0) : 0), 0
     );
+    const falta = Math.max(0, totalSpentOnCards - yaPagado);
     return {
       ingreso_mensual: totalBudget,
       ahorro_reservado: totalSavingsCommitment,
       ya_pagado: yaPagado,
-      falta_por_pagar: Math.max(0, obligaciones - yaPagado),
-      por_pagar_tarjetas: Math.max(0, totalSpentOnCards - yaPagado),
+      falta_por_pagar: falta,
+      planeado_no_facturado: Math.max(0, presupuestado - totalSpentOnCards),
+      por_pagar_tarjetas: falta,
       comprometido_tarjetas: totalSpentOnCards,
       presupuestado_total: presupuestado,
       obligaciones,

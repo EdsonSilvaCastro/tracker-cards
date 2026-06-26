@@ -399,7 +399,7 @@ const getSpendingAnalysis = async (req, res) => {
     // Get budget expenses for the month
     const { data: expenses, error: expensesError } = await supabaseAdmin
       .from('monthly_budget_expenses')
-      .select('actual_spent, budgeted_amount, paid_with, status')
+      .select('actual_spent, budgeted_amount, paid_with')
       .eq('user_id', req.user.id)
       .eq('month', monthNum)
       .eq('year', yearNum);
@@ -438,16 +438,17 @@ const getSpendingAnalysis = async (req, res) => {
     });
 
     // ── Hero "Te queda libre" ─────────────────────────────────────────────
-    // Sources: card statement totals (monthly_card_balances.amount_to_pay) +
-    // is_paid flag, the budgeted plan, and savings. We deliberately DON'T use
-    // card_transactions installments: a cycle's installments are already inside
-    // that cycle's statement totals, so adding them double-counts.
-    //   ya_pagado     = statements of cards already marked paid
-    //   comprometido  = all card statements (paid + unpaid) = billed this cycle
-    //   presupuestado = full budgeted plan
-    //   obligaciones  = MAX(comprometido, presupuestado) — reserve the whole
-    //                   plan, or the real card spend if you already blew past it
-    // The four buckets (ahorro + ya_pagado + falta + libre) always sum to income.
+    // "The card is what you owe." A budgeted expense isn't a separate debt — it
+    // lives INSIDE a card statement. So paid/unpaid is read at the CARD level
+    // (monthly_card_balances.is_paid), not the expense level. Budgeted items not
+    // yet billed to a card are shown as "planeado_no_facturado" so you still
+    // reserve the whole plan ("para no pasarte"). We never use card_transactions
+    // installments (already inside the statements → double count).
+    //   ya_pagado            = statements of cards marked paid
+    //   falta_por_pagar      = statements of cards NOT marked paid (real debt)
+    //   planeado_no_facturado= plan still above what's been billed = MAX(0, plan − billed)
+    //   obligaciones         = MAX(billed, plan)
+    // The five buckets (ahorro + ya_pagado + falta + planeado + libre) sum to income.
 
     // ingreso del mes
     const { data: budgetRow } = await supabaseAdmin
@@ -474,39 +475,27 @@ const getSpendingAnalysis = async (req, res) => {
       (sum, e) => sum + parseFloat(e.budgeted_amount || 0), 0
     );
 
-    const comprometido_tarjetas = total_spent_on_cards; // todos los saldos del ciclo
-    // "Por pagar" metric = saldos de tarjeta aún sin marcar pagadas (nivel tarjeta)
-    const ya_pagado_tarjetas = userBalances.reduce(
+    const comprometido_tarjetas = total_spent_on_cards; // todos los saldos del ciclo (facturado)
+    const ya_pagado = userBalances.reduce(
       (sum, b) => sum + (b.is_paid ? parseFloat(b.amount_to_pay || 0) : 0), 0
     );
-    const por_pagar_tarjetas = Math.max(0, comprometido_tarjetas - ya_pagado_tarjetas);
-
-    // Hero buckets use EXPENSE-level status, not card is_paid: a card can be
-    // "por pagar" while most of its budgeted items are already marked paid.
-    //   ya_pagado = budgeted de gastos marcados paid/partial
-    //   falta_por_pagar = lo que falta de las obligaciones (gastos pending +
-    //                     cualquier sobregiro de tarjeta por encima del plan)
-    const ya_pagado = (expenses || []).reduce(
-      (sum, e) =>
-        sum + (e.status === 'paid' || e.status === 'partial'
-          ? parseFloat(e.budgeted_amount || 0)
-          : 0),
-      0
-    );
+    const falta_por_pagar = Math.max(0, comprometido_tarjetas - ya_pagado); // tarjetas sin pagar
+    const por_pagar_tarjetas = falta_por_pagar;
 
     const obligaciones = Math.max(comprometido_tarjetas, presupuestado_total);
-    const falta_por_pagar = Math.max(0, obligaciones - ya_pagado);
+    const planeado_no_facturado = Math.max(0, presupuestado_total - comprometido_tarjetas);
     const disponible_plan = ingreso_mensual - ahorro_reservado - obligaciones; // = libre
     const colchon_planeado = ingreso_mensual - ahorro_reservado - presupuestado_total;
     const plan_exceeded = comprometido_tarjetas > presupuestado_total;
 
     const hero = {
-      // components / buckets (ahorro + ya_pagado + falta_por_pagar + libre = ingreso)
+      // buckets: ahorro + ya_pagado + falta_por_pagar + planeado_no_facturado + libre = ingreso
       ingreso_mensual,
       ahorro_reservado,
-      ya_pagado,               // gastos marcados paid/partial (budgeted)
-      falta_por_pagar,         // gastos pendientes + sobregiro de tarjeta vs plan
-      por_pagar_tarjetas,      // tarjetas sin marcar pagadas
+      ya_pagado,               // tarjetas marcadas pagadas (is_paid)
+      falta_por_pagar,         // tarjetas sin pagar (deuda real)
+      planeado_no_facturado,   // plan aún por encima de lo facturado
+      por_pagar_tarjetas,      // = falta_por_pagar (tarjetas sin pagar)
       comprometido_tarjetas,   // todos los saldos del ciclo (= cargado a tarjeta)
       presupuestado_total,
       obligaciones,
