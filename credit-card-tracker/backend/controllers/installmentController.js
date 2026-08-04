@@ -49,9 +49,13 @@ export const createInstallmentPlan = async (req, res) => {
     if (planError) throw planError;
 
     // 2. Build all transactions
+    const now = new Date();
+    const nowYear = now.getFullYear();
+    const nowMonth = now.getMonth() + 1;
     const transactions = [];
     for (let i = 0; i < Number(total_months); i++) {
       const { year: billing_year, month: billing_month } = addMonths(Number(start_year), Number(start_month), i);
+      const isPast = billing_year < nowYear || (billing_year === nowYear && billing_month < nowMonth);
       const transaction_date = `${billing_year}-${String(billing_month).padStart(2, '0')}-01`;
       transactions.push({
         user_id: req.user.id,
@@ -65,7 +69,7 @@ export const createInstallmentPlan = async (req, res) => {
         source: 'installment',
         installment_plan_id: plan.id,
         installment_number: i + 1,
-        installment_status: 'pending',
+        installment_status: isPast ? 'paid' : 'pending',
       });
     }
 
