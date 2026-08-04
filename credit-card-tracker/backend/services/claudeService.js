@@ -15,7 +15,15 @@ export async function parseExpenseMessage(userMessage, context) {
   const text = response.content[0].text.trim();
   // Tolerar respuestas envueltas en ```json```
   const cleaned = text.replace(/^```json\s*/i, '').replace(/\s*```$/, '');
-  return JSON.parse(cleaned);
+  const parsed = JSON.parse(cleaned);
+
+  // Claude a veces omite needs_clarification en su respuesta JSON; sin este
+  // default, `parsed.needs_clarification.length` truena en telegramController.
+  if (!Array.isArray(parsed.needs_clarification)) {
+    parsed.needs_clarification = [];
+  }
+
+  return parsed;
 }
 
 function buildSystemPrompt(context) {
