@@ -48,3 +48,8 @@ coverage/
 
 # AWS deployment files (temporary)
 .aws-sam/
+
+# Local demo/seed and screenshots
+seed-demo.mjs
+/*.png
+.playwright-mcp/
