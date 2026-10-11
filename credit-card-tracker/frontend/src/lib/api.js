@@ -96,6 +96,15 @@ export const installmentPlansApi = {
   cancel: (id) => api.delete(`/installment-plans/${id}`),
 };
 
+// ==================== Exit Plan API ====================
+export const exitPlanApi = {
+  get: () => api.get('/exit-plan'),
+  saveConfig: (data) => api.put('/exit-plan/config', data),
+  createClosing: (data) => api.post('/exit-plan/closings', data),
+  updateClosing: (id, data) => api.put(`/exit-plan/closings/${id}`, data),
+  deleteClosing: (id) => api.delete(`/exit-plan/closings/${id}`),
+};
+
 // ==================== Card Transactions API ====================
 export const cardTransactionsApi = {
   create: (data) => api.post('/card-transactions', data),

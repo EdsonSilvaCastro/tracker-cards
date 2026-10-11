@@ -17,6 +17,7 @@ import {
   PiggyBank,
   TrendingUp,
   CalendarClock,
+  DoorOpen,
   Plus
 } from 'lucide-react';
 import QuickExpenseModal from './QuickExpenseModal';
@@ -27,6 +28,7 @@ const navigation = [
   { name: 'Due Dates', href: '/due-dates', icon: Calendar },
   { name: 'Compare', href: '/compare', icon: BarChart3 },
   { name: 'Savings', href: '/savings', icon: PiggyBank },
+  { name: 'Plan de salida', href: '/exit-plan', icon: DoorOpen },
   { name: 'Annual', href: '/annual', icon: TrendingUp },
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Cards', href: '/cards', icon: CreditCard },

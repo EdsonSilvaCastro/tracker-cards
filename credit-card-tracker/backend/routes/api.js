@@ -13,6 +13,7 @@ import * as telegramController from '../controllers/telegramController.js';
 import * as installmentController from '../controllers/installmentController.js';
 import * as savingsAllocationsController from '../controllers/savingsAllocationsController.js';
 import * as analysisController from '../controllers/analysisController.js';
+import * as exitPlanController from '../controllers/exitPlanController.js';
 
 const router = express.Router();
 
@@ -89,6 +90,13 @@ router.get('/analytics/trends', analyticsController.getSpendingTrends);
 
 // ==================== AI Analysis Routes ====================
 router.post('/analysis', analysisController.analyzeFinances);
+
+// ==================== Exit Plan Routes ====================
+router.get('/exit-plan', exitPlanController.getExitPlan);
+router.put('/exit-plan/config', exitPlanController.saveConfig);
+router.post('/exit-plan/closings', exitPlanController.createClosing);
+router.put('/exit-plan/closings/:id', exitPlanController.updateClosing);
+router.delete('/exit-plan/closings/:id', exitPlanController.deleteClosing);
 
 // ==================== Installment Plans Routes ====================
 router.get('/installment-plans', installmentController.getInstallmentPlans);
