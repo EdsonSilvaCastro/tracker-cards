@@ -3,7 +3,7 @@ import { supabaseAdmin } from '../config/supabase.js';
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
-const MODEL = 'claude-sonnet-5';
+const MODEL = 'claude-sonnet-5-5';
 const MAX_TOOL_TURNS = 6;
 
 const tools = [
@@ -178,12 +178,12 @@ function buildSystemPrompt() {
 
 Fecha actual: ${now.toISOString().slice(0, 10)} (mes ${now.getMonth() + 1}, año ${now.getFullYear()}).
 
-Usa las herramientas disponibles para consultar los datos reales del usuario antes de responder — nunca inventes cifras. Si la pregunta es ambigua sobre el periodo (ej. "este mes"), usa el mes/año actual. Responde en español, de forma clara y concisa, con montos en formato MXN (ej. $1,234.50) e incluye los números concretos que respaldan tu análisis.`;
+Usa las herramientas disponibles para consultar los datos reales del usuario antes de responder — nunca inventes cifras. Si la pregunta es ambigua sobre el periodo (ej. "este mes"), usa el mes/año actual. Responde en español, de forma clara y concisa, con montos en formato MXN (ej. $1,234.50) e incluye los números concretos que respaldan tu análisis. Responde en texto plano, sin markdown: nada de asteriscos, almohadillas ni tablas; para listas usa líneas que empiecen con un guion.`;
 }
 
-export async function analyzeFinances(userId, question) {
+export async function analyzeFinances(userId, question, history = []) {
   const system = buildSystemPrompt();
-  const messages = [{ role: 'user', content: question }];
+  const messages = [...history, { role: 'user', content: question }];
 
   for (let turn = 0; turn < MAX_TOOL_TURNS; turn++) {
     const response = await client.messages.create({

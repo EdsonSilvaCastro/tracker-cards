@@ -96,6 +96,11 @@ export const installmentPlansApi = {
   cancel: (id) => api.delete(`/installment-plans/${id}`),
 };
 
+// ==================== Assistant API ====================
+export const assistantApi = {
+  ask: (question, history) => api.post('/analysis', { question, history }, { timeout: 90000 }),
+};
+
 // ==================== Exit Plan API ====================
 export const exitPlanApi = {
   get: () => api.get('/exit-plan'),

@@ -21,6 +21,7 @@ import {
   Plus
 } from 'lucide-react';
 import QuickExpenseModal from './QuickExpenseModal';
+import AssistantChat from './AssistantChat';
 
 const navigation = [
   { name: 'Monthly', href: '/monthly', icon: CalendarDays },
@@ -184,6 +185,8 @@ export default function Layout() {
       >
         <Plus className="w-6 h-6" />
       </button>
+
+      <AssistantChat />
 
       {quickExpenseOpen && (
         <QuickExpenseModal
