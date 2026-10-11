@@ -12,6 +12,7 @@ import * as cardTransactionsController from '../controllers/cardTransactionsCont
 import * as telegramController from '../controllers/telegramController.js';
 import * as installmentController from '../controllers/installmentController.js';
 import * as savingsAllocationsController from '../controllers/savingsAllocationsController.js';
+import * as analysisController from '../controllers/analysisController.js';
 
 const router = express.Router();
 
@@ -85,6 +86,9 @@ router.delete('/savings/:id', savingsController.deleteSavingsGoal);
 router.get('/analytics/annual/:year', analyticsController.getAnnualSummary);
 router.get('/analytics/compare', analyticsController.compareMonths);
 router.get('/analytics/trends', analyticsController.getSpendingTrends);
+
+// ==================== AI Analysis Routes ====================
+router.post('/analysis', analysisController.analyzeFinances);
 
 // ==================== Installment Plans Routes ====================
 router.get('/installment-plans', installmentController.getInstallmentPlans);
