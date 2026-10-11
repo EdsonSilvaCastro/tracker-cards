@@ -123,7 +123,7 @@ export default function ExitPlan() {
   const retirosMes = cfg.retirosPlaneados.filter((r) => r.month === idxToYm(view.siguiente));
 
   return (
-    <div className="flex flex-col gap-5 max-w-[1200px]">
+    <div className="flex flex-col gap-5">
       <header className="flex flex-wrap gap-3 justify-between items-end">
         <div>
           <h1 className="text-[26px] font-bold leading-tight">Plan de salida</h1>
