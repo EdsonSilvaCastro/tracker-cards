@@ -210,6 +210,8 @@ export async function analyzeFinances(userId, question, history = []) {
   const system = buildSystemPrompt();
   const messages = [...history, { role: 'user', content: question }];
 
+  let nudged = false;
+
   for (let turn = 0; turn < MAX_TOOL_TURNS; turn++) {
     const response = await client.messages.create({
       model: MODEL,
@@ -220,8 +222,20 @@ export async function analyzeFinances(userId, question, history = []) {
     });
 
     if (response.stop_reason !== 'tool_use') {
-      const textBlock = response.content.find(block => block.type === 'text');
-      return textBlock ? textBlock.text.trim() : '';
+      const text = response.content
+        .filter(block => block.type === 'text')
+        .map(block => block.text)
+        .join('\n')
+        .trim();
+      if (text) return text;
+
+      console.error('Analysis returned no text:', response.stop_reason, response.content.map(b => b.type));
+      if (nudged) return '';
+      // Empty final turn (seen after tool results): ask once for the written answer.
+      nudged = true;
+      messages.push({ role: 'assistant', content: response.content.length ? response.content : '(sin respuesta)' });
+      messages.push({ role: 'user', content: 'Con los datos que ya consultaste, escribe tu respuesta final.' });
+      continue;
     }
 
     messages.push({ role: 'assistant', content: response.content });
