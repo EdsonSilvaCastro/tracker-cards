@@ -1,5 +1,18 @@
 import { supabaseAdmin } from '../config/supabase.js';
 
+// Paying a card's statement settles that month's installments on it.
+const markInstallmentsPaid = async (cardId, month, year) => {
+  const { error } = await supabaseAdmin
+    .from('card_transactions')
+    .update({ installment_status: 'paid', updated_at: new Date().toISOString() })
+    .eq('card_id', cardId)
+    .eq('billing_month', month)
+    .eq('billing_year', year)
+    .eq('installment_status', 'pending');
+
+  if (error) throw error;
+};
+
 // Get all monthly balances (optionally filtered by month/year)
 const getMonthlyBalances = async (req, res) => {
   try {
@@ -154,6 +167,8 @@ const upsertMonthlyBalance = async (req, res) => {
 
     if (error) throw error;
 
+    if (data.is_paid) await markInstallmentsPaid(card_id, data.month, data.year);
+
     res.json({ success: true, data });
   } catch (error) {
     console.error('Error upserting monthly balance:', error);
@@ -198,6 +213,8 @@ const updateMonthlyBalance = async (req, res) => {
       .single();
 
     if (error) throw error;
+
+    if (is_paid) await markInstallmentsPaid(existing.card_id, existing.month, existing.year);
 
     res.json({ success: true, data });
   } catch (error) {
@@ -268,6 +285,8 @@ const togglePaymentStatus = async (req, res) => {
       if (error) throw error;
       data = created;
     }
+
+    if (data.is_paid) await markInstallmentsPaid(card_id, monthNum, yearNum);
 
     res.json({ success: true, data });
   } catch (error) {

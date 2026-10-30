@@ -42,6 +42,7 @@ const navigation = [
 export default function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [quickExpenseOpen, setQuickExpenseOpen] = useState(false);
+  const [assistantOpen, setAssistantOpen] = useState(false);
   const [savedMsg, setSavedMsg] = useState(null);
   const savedTimerRef = useRef(null);
   const { user, signOut } = useAuth();
@@ -159,7 +160,7 @@ export default function Layout() {
       </div>
 
       {/* Main content */}
-      <div className="lg:pl-64">
+      <div className={`lg:pl-64 ${assistantOpen ? 'sm:pr-[400px]' : ''}`}>
         {/* Top bar */}
         <div className="sticky top-0 z-30 flex items-center h-16 bg-white border-b border-gray-200 px-4 lg:hidden">
           <button
@@ -186,7 +187,7 @@ export default function Layout() {
         <Plus className="w-6 h-6" />
       </button>
 
-      <AssistantChat />
+      <AssistantChat open={assistantOpen} setOpen={setAssistantOpen} />
 
       {quickExpenseOpen && (
         <QuickExpenseModal

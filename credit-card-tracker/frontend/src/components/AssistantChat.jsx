@@ -10,8 +10,7 @@ const SUGERENCIAS = [
 ];
 const MAX_HISTORY = 10;
 
-export default function AssistantChat() {
-  const [open, setOpen] = useState(false);
+export default function AssistantChat({ open, setOpen }) {
   const [messages, setMessages] = useState([]); // { role: 'user' | 'assistant' | 'error', content, retry? }
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);

@@ -21,7 +21,7 @@ const tools = [
   },
   {
     name: 'get_card_transactions',
-    description: 'Obtiene las transacciones de tarjeta del usuario (card_transactions) para un mes de facturación dado: monto, comercio, tarjeta y fecha.',
+    description: 'Obtiene las transacciones de tarjeta del usuario (card_transactions) para un mes de facturación dado: monto, comercio, tarjeta, fecha y, en las mensualidades, su estado (installment_status: paid, pending o cancelled).',
     input_schema: {
       type: 'object',
       properties: {
@@ -33,11 +33,14 @@ const tools = [
   },
   {
     name: 'get_card_balances',
-    description: 'Obtiene las tarjetas activas del usuario con su saldo actual, límite de crédito y % de utilización.',
+    description: 'Obtiene las tarjetas activas del usuario con sus saldos reales de un mes: saldo total (current_balance), monto a pagar del mes (amount_to_pay) y si ya se pagó (is_paid), además del límite de crédito y % de utilización.',
     input_schema: {
       type: 'object',
-      properties: {},
-      required: [],
+      properties: {
+        month: { type: 'integer', description: 'Mes, 1-12' },
+        year: { type: 'integer', description: 'Año, ej. 2026' },
+      },
+      required: ['month', 'year'],
     },
   },
   {
@@ -79,7 +82,7 @@ async function getBudgetSummary(userId, month, year) {
 async function getCardTransactions(userId, month, year) {
   const { data, error } = await supabaseAdmin
     .from('card_transactions')
-    .select('amount, merchant, transaction_date, notes, credit_cards(card_name)')
+    .select('amount, merchant, transaction_date, notes, installment_status, credit_cards(card_name)')
     .eq('user_id', userId)
     .eq('billing_month', month)
     .eq('billing_year', year)
@@ -89,21 +92,43 @@ async function getCardTransactions(userId, month, year) {
   return data || [];
 }
 
-async function getCardBalances(userId) {
-  const { data, error } = await supabaseAdmin
+async function getCardBalances(userId, month, year) {
+  const { data: cards, error } = await supabaseAdmin
     .from('credit_cards')
-    .select('card_name, bank, current_balance, credit_limit, available_credit')
+    .select('id, card_name, bank, credit_limit')
     .eq('user_id', userId)
     .eq('is_active', true);
 
   if (error) throw error;
 
-  return (data || []).map(card => ({
-    ...card,
-    utilization_percentage: card.credit_limit > 0
-      ? Number(((card.current_balance / card.credit_limit) * 100).toFixed(1))
-      : 0,
-  }));
+  const cardIds = (cards || []).map(c => c.id);
+  const { data: balances, error: balancesError } = await supabaseAdmin
+    .from('monthly_card_balances')
+    .select('card_id, current_balance, amount_to_pay, is_paid, paid_date')
+    .in('card_id', cardIds.length ? cardIds : ['00000000-0000-0000-0000-000000000000'])
+    .eq('month', month)
+    .eq('year', year);
+
+  if (balancesError) throw balancesError;
+
+  const byCard = Object.fromEntries((balances || []).map(b => [b.card_id, b]));
+
+  return (cards || []).map(({ id, ...card }) => {
+    const balance = byCard[id];
+    const currentBalance = Number(balance?.current_balance || 0);
+    return {
+      ...card,
+      month,
+      year,
+      current_balance: currentBalance,
+      amount_to_pay: Number(balance?.amount_to_pay || 0),
+      is_paid: balance?.is_paid ?? false,
+      paid_date: balance?.paid_date ?? null,
+      utilization_percentage: card.credit_limit > 0
+        ? Number(((currentBalance / card.credit_limit) * 100).toFixed(1))
+        : 0,
+    };
+  });
 }
 
 async function getSpendingTrends(userId, months) {
@@ -164,7 +189,7 @@ async function executeTool(name, input, userId) {
     case 'get_card_transactions':
       return getCardTransactions(userId, input.month, input.year);
     case 'get_card_balances':
-      return getCardBalances(userId);
+      return getCardBalances(userId, input.month, input.year);
     case 'get_spending_trends':
       return getSpendingTrends(userId, input.months || 6);
     default:
