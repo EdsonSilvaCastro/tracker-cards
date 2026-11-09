@@ -131,4 +131,12 @@ export const savingsAllocationsApi = {
   delete: (id) => api.delete(`/savings-allocations/${id}`),
 };
 
+// ==================== Shopping List API ====================
+export const shoppingApi = {
+  list: () => api.get('/shopping'),
+  create: (data) => api.post('/shopping', data),
+  update: (id, data) => api.put(`/shopping/${id}`, data),
+  delete: (id) => api.delete(`/shopping/${id}`),
+};
+
 export default api;

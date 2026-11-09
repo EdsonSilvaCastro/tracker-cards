@@ -18,6 +18,7 @@ import {
   TrendingUp,
   CalendarClock,
   DoorOpen,
+  ShoppingCart,
   Plus
 } from 'lucide-react';
 import QuickExpenseModal from './QuickExpenseModal';
@@ -30,6 +31,7 @@ const navigation = [
   { name: 'Compare', href: '/compare', icon: BarChart3 },
   { name: 'Savings', href: '/savings', icon: PiggyBank },
   { name: 'Plan de salida', href: '/exit-plan', icon: DoorOpen },
+  { name: 'Compras', href: '/shopping', icon: ShoppingCart },
   { name: 'Annual', href: '/annual', icon: TrendingUp },
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Cards', href: '/cards', icon: CreditCard },

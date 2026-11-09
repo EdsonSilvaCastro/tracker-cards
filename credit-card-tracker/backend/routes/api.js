@@ -14,6 +14,7 @@ import * as installmentController from '../controllers/installmentController.js'
 import * as savingsAllocationsController from '../controllers/savingsAllocationsController.js';
 import * as analysisController from '../controllers/analysisController.js';
 import * as exitPlanController from '../controllers/exitPlanController.js';
+import * as shoppingController from '../controllers/shoppingController.js';
 
 const router = express.Router();
 
@@ -104,6 +105,12 @@ router.post('/installment-plans', installmentController.createInstallmentPlan);
 router.put('/installment-plans/:id', installmentController.updateInstallmentPlan);
 router.patch('/installment-plans/:id/toggle-installment', installmentController.toggleInstallment);
 router.delete('/installment-plans/:id', installmentController.cancelInstallmentPlan);
+
+// ==================== Shopping List Routes ====================
+router.get('/shopping', shoppingController.getItems);
+router.post('/shopping', shoppingController.createItem);
+router.put('/shopping/:id', shoppingController.updateItem);
+router.delete('/shopping/:id', shoppingController.deleteItem);
 
 // ==================== Savings Allocations Routes ====================
 router.get('/savings-allocations/:month/:year', savingsAllocationsController.getAllocations);
