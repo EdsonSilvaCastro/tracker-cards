@@ -1,16 +1,20 @@
 import { supabaseAdmin } from '../config/supabase.js';
+import { syncPlanStatuses } from './installmentController.js';
 
 // Paying a card's statement settles that month's installments on it.
 const markInstallmentsPaid = async (cardId, month, year) => {
-  const { error } = await supabaseAdmin
+  const { data, error } = await supabaseAdmin
     .from('card_transactions')
     .update({ installment_status: 'paid', updated_at: new Date().toISOString() })
     .eq('card_id', cardId)
     .eq('billing_month', month)
     .eq('billing_year', year)
-    .eq('installment_status', 'pending');
+    .eq('installment_status', 'pending')
+    .select('installment_plan_id');
 
   if (error) throw error;
+
+  await syncPlanStatuses((data || []).map(t => t.installment_plan_id));
 };
 
 // Get all monthly balances (optionally filtered by month/year)

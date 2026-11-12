@@ -87,6 +87,41 @@ export const createInstallmentPlan = async (req, res) => {
   }
 };
 
+// Keeps installment_plans.status in sync with its installments: a plan with no
+// pending installments is 'completed'; un-paying one re-activates it.
+// Cancelled plans are never touched.
+export const syncPlanStatuses = async (planIds) => {
+  const ids = [...new Set((planIds || []).filter(Boolean))];
+  if (ids.length === 0) return;
+
+  const { data: plans, error: plansError } = await supabaseAdmin
+    .from('installment_plans')
+    .select('id, status')
+    .in('id', ids)
+    .in('status', ['active', 'completed']);
+  if (plansError) throw plansError;
+
+  const { data: txs, error: txError } = await supabaseAdmin
+    .from('card_transactions')
+    .select('installment_plan_id, installment_status')
+    .in('installment_plan_id', ids);
+  if (txError) throw txError;
+
+  for (const plan of plans || []) {
+    const own = (txs || []).filter(t => t.installment_plan_id === plan.id);
+    const hasPending = own.some(t => t.installment_status === 'pending');
+    const hasPaid = own.some(t => t.installment_status === 'paid');
+    const next = !hasPending && hasPaid ? 'completed' : 'active';
+    if (next === plan.status) continue;
+
+    const { error } = await supabaseAdmin
+      .from('installment_plans')
+      .update({ status: next, updated_at: new Date().toISOString() })
+      .eq('id', plan.id);
+    if (error) throw error;
+  }
+};
+
 // ─── GET /api/installment-plans ──────────────────────────────────────────────
 
 export const getInstallmentPlans = async (req, res) => {
@@ -320,6 +355,8 @@ export const toggleInstallment = async (req, res) => {
       .eq('id', tx.id);
 
     if (updateError) throw updateError;
+
+    await syncPlanStatuses([id]);
 
     res.json({ success: true, new_status: newStatus });
   } catch (error) {
