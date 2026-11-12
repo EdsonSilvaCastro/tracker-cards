@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, Fragment } from 'react';
 import { CalendarClock, ChevronDown, ChevronUp, Check } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
@@ -24,6 +24,12 @@ function fmtMonthYear(month, year) {
 
 function fmtK(n) {
   return n >= 1000 ? `$${(n / 1000).toFixed(1)}k` : `$${n}`;
+}
+
+// The backend never flips status to 'completed', so a plan whose installments
+// are all settled is treated as finished here.
+function isFinishedPlan(plan) {
+  return plan.status === 'active' && (plan.transactions?.length || 0) > 0 && (plan.remaining_count || 0) === 0;
 }
 
 function getMonthRange(plans) {
@@ -273,8 +279,13 @@ export default function MonthlyPayments() {
   }
 
   // ── Derived data ────────────────────────────────────────────────────────────
-  const activePlans = plans.filter(p => p.status === 'active');
-  const inactivePlans = plans.filter(p => p.status !== 'active');
+  const activePlans = plans.filter(p => p.status === 'active' && !isFinishedPlan(p));
+  const inactivePlans = plans.filter(p => p.status !== 'active' || isFinishedPlan(p));
+
+  // Gantt grouping: active plans by monthly amount desc, then remaining installments desc
+  const ganttActive = [...activePlans].sort((a, b) =>
+    Number(b.monthly_amount) - Number(a.monthly_amount) || (b.remaining_count || 0) - (a.remaining_count || 0)
+  );
 
   const thisMonthCommitment = activePlans.reduce((sum, plan) => {
     const state = getCellState(plan, nowYear, nowMonth, nowYear, nowMonth);
@@ -513,7 +524,7 @@ export default function MonthlyPayments() {
           <CardContent>
             <div className="overflow-x-auto">
               {calView === 'gantt'
-                ? <GanttView plans={plans} months={calMonths} yearSpans={yearSpans} monthTotals={monthTotals} nowYear={nowYear} nowMonth={nowMonth} cardName={cardName} />
+                ? <GanttView activePlans={ganttActive} inactivePlans={inactivePlans} months={calMonths} yearSpans={yearSpans} monthTotals={monthTotals} nowYear={nowYear} nowMonth={nowMonth} cardName={cardName} />
                 : <TableView plans={plans} months={calMonths} yearSpans={yearSpans} monthTotals={monthTotals} nowYear={nowYear} nowMonth={nowMonth} cardName={cardName} onToggle={handleToggleInstallment} />
               }
             </div>
@@ -771,7 +782,7 @@ function PlanCard({ plan, cards, nowYear, nowMonth, onCancel, onEdit, onToggle, 
 }
 
 // ── GanttView ─────────────────────────────────────────────────────────────────
-function GanttView({ plans, months, yearSpans, monthTotals, nowYear, nowMonth, cardName }) {
+function GanttView({ activePlans, inactivePlans, months, yearSpans, monthTotals, nowYear, nowMonth, cardName }) {
   const COL = 34;
   const LABEL = 140;
 
@@ -805,31 +816,46 @@ function GanttView({ plans, months, yearSpans, monthTotals, nowYear, nowMonth, c
         </tr>
       </thead>
       <tbody>
-        {plans.map(plan => {
-          const segments = getGanttSegments(plan, months, nowYear, nowMonth);
-          return (
-            <tr key={plan.id} className="border-b border-black">
-              <td className="text-xs font-bold pr-2 py-1 whitespace-nowrap overflow-hidden" style={{ maxWidth: LABEL, textOverflow: 'ellipsis' }}>
-                {plan.name}
-                <div className="text-[10px] font-normal text-gray-500">{cardName(plan.card_id)}</div>
+        {[
+          { label: 'Activos', list: activePlans },
+          { label: 'Completados / Cancelados', list: inactivePlans },
+        ].filter(g => g.list.length > 0).map(group => (
+          <Fragment key={group.label}>
+            <tr className="border-b border-black bg-gray-100">
+              <td colSpan={months.length + 1} className="text-[10px] font-black uppercase tracking-wider text-gray-500 px-1 py-1">
+                {group.label}
               </td>
-              {segments.map((seg, si) => {
-                const span = seg.endIdx - seg.startIdx + 1;
-                const st = seg.state;
-                const showLabel = span > 2 && st;
-                return (
-                  <td key={si} colSpan={span} className="py-1 px-0.5 border-r border-black" style={{ height: 32 }}>
-                    {st && (
-                      <div className={`h-6 flex items-center justify-center text-[10px] font-bold overflow-hidden ${cellClasses(st)}`}>
-                        {showLabel && (st === 'paid' ? 'Pagado' : st === 'pending' ? 'Pendiente' : st === 'current' ? 'Actual' : '')}
-                      </div>
-                    )}
-                  </td>
-                );
-              })}
             </tr>
-          );
-        })}
+            {group.list.map(plan => {
+              const segments = getGanttSegments(plan, months, nowYear, nowMonth);
+              return (
+                <tr key={plan.id} className="border-b border-black">
+                  <td className="text-xs font-bold pr-2 py-1 whitespace-nowrap overflow-hidden" style={{ maxWidth: LABEL, textOverflow: 'ellipsis' }}>
+                    {plan.name}
+                    <div className="text-[10px] font-normal text-gray-500">
+                      {cardName(plan.card_id)} · ${fmtAmount(plan.monthly_amount)}
+                      {group.label === 'Activos' ? ` · faltan ${plan.remaining_count || 0}` : ''}
+                    </div>
+                  </td>
+                  {segments.map((seg, si) => {
+                    const span = seg.endIdx - seg.startIdx + 1;
+                    const st = seg.state;
+                    const showLabel = span > 2 && st;
+                    return (
+                      <td key={si} colSpan={span} className="py-1 px-0.5 border-r border-black" style={{ height: 32 }}>
+                        {st && (
+                          <div className={`h-6 flex items-center justify-center text-[10px] font-bold overflow-hidden ${cellClasses(st)}`}>
+                            {showLabel && (st === 'paid' ? 'Pagado' : st === 'pending' ? 'Pendiente' : st === 'current' ? 'Actual' : '')}
+                          </div>
+                        )}
+                      </td>
+                    );
+                  })}
+                </tr>
+              );
+            })}
+          </Fragment>
+        ))}
 
         {/* Total row */}
         <tr className="border-t-2 border-black bg-gray-50">
